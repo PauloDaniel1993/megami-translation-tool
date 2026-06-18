@@ -1,0 +1,160 @@
+{
+  "batch_id": "s1:batch:0018",
+  "translations": [
+    {
+      "line_id": "s1:01345",
+      "en": "I was told that already.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01347",
+      "en": "Rinsha laughs cheerfully.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01350",
+      "en": "So you came to find someone too?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01353",
+      "en": "Half is for recovery.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01356",
+      "en": "Oh, not so serious?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01357",
+      "en": "And Levia works so hard.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01360",
+      "en": "Yeah.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01362",
+      "en": "Levia is dedicated, but works too hard.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01363",
+      "en": "I hope that doesn't backfire.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01366",
+      "en": "What do you think of Levia and the others?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01369",
+      "en": "Huh? They're customers.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01371",
+      "en": "Rinsha answers as if it's obvious.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01374",
+      "en": "No, I mean... Levia's impression in this town",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01375",
+      "en": "doesn't seem good.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01378",
+      "en": "Ah, right... are you worried?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01381",
+      "en": "Something like that.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01384",
+      "en": "Hehe, it's okay. There were some issues",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01385",
+      "en": "at first, but Levia herself is popular",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01386",
+      "en": "with the townspeople.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01389",
+      "en": "Really?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01392",
+      "en": "Yes, even with her title, she's polite to",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01393",
+      "en": "everyone, and many people look up to her,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01394",
+      "en": "especially the girls.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01397",
+      "en": "I see...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01399",
+      "en": "Since Levia became a general despite being a woman,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01400",
+      "en": "some men resent her, but women love her.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01402",
+      "en": "When Levia was at the palace in Lewinia,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01403",
+      "en": "she was always surrounded by noble girls,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01404",
+      "en": "looking exasperated. I saw that a lot.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01407",
+      "en": "But...",
+      "notes": ""
+    }
+  ],
+  "file": "s1.adx",
+  "model": "deepseek-v4-flash",
+  "prompt_version": "translation-v2-jp-context",
+  "created_at": "2026-05-28T16:53:13.760588+00:00",
+  "status": "drafted"
+}

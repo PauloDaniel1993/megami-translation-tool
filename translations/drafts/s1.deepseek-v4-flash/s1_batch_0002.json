@@ -1,0 +1,145 @@
+{
+  "batch_id": "s1:batch:0002",
+  "translations": [
+    {
+      "line_id": "s1:00083",
+      "en": "What are your orders now, Master?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00086",
+      "en": "Right... Let's get a room first.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00089",
+      "en": "Yes, I hope we can find a good inn.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00092",
+      "en": "Yeah.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00094",
+      "en": "...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00096",
+      "en": "A sudden killing intent pierces me.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00098",
+      "en": "I turn toward the killing intent source, from an inn",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00099",
+      "en": "A familiar figure, shoulders squared, strides near.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00101",
+      "en": "That's...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00104",
+      "en": "Even so, we are three days late,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00105",
+      "en": "I hope Levia isn't angry...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00107",
+      "en": "Shuri, unaware of killing intent, notices nothing,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00108",
+      "en": "I answer her words with a sigh.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00111",
+      "en": "No, she's angry.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00114",
+      "en": "Huh?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00122",
+      "en": "Of course.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00130",
+      "en": "Ah, Levia!",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00132",
+      "en": "At the sharp voice from behind, Shuri steps aside,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00133",
+      "en": "She bowed her head.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00141",
+      "en": "With several soldiers, a woman in silver armor",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00142",
+      "en": "glared as if to kill me.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00144",
+      "en": "This woman is General Levia, my current commander",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00145",
+      "en": "as a guest. She is Lewinia's only female",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00146",
+      "en": "knight commander, and an old acquaintance.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00148",
+      "en": "We were to meet here three days ago, but...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00153",
+      "en": "Levia seems very angry.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00162",
+      "en": "Celica, what have you been doing all this time?",
+      "notes": ""
+    }
+  ],
+  "file": "s1.adx",
+  "model": "deepseek-v4-flash",
+  "prompt_version": "translation-v2-jp-context",
+  "created_at": "2026-05-30T12:06:39.698189+00:00",
+  "status": "drafted"
+}

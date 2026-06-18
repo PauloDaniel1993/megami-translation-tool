@@ -1,0 +1,130 @@
+{
+  "batch_id": "s1:batch:0009",
+  "translations": [
+    {
+      "line_id": "s1:00635",
+      "en": "Oh, really?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00636",
+      "en": "Then, adjacent rooms?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00643",
+      "en": "Yes, please.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00650",
+      "en": "So, how many days are you staying?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00657",
+      "en": "Um...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00660",
+      "en": "Not decided, but a week for now.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00666",
+      "en": "Hearing my voice from behind Shuri,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00667",
+      "en": "Rinsha's face shifts to surprise.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00670",
+      "en": "Oh, you're a man?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00673",
+      "en": "Yeah.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00676",
+      "en": "Well, well...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00678",
+      "en": "For some reason, I'm often mistaken for a woman.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00679",
+      "en": "I am often mistaken for a woman.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00686",
+      "en": "Um...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00688",
+      "en": "Rinsha stares at my face as if it's something rare.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00689",
+      "en": "Shuri, looking troubled, calls out to her.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00696",
+      "en": "Oh, yes, yes. We require payment upfront, okay?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00703",
+      "en": "Yes, how much is it?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00710",
+      "en": "Two rooms for a week... 140 shilin.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00716",
+      "en": "Shuri's hand freezes while opening the money pouch.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00723",
+      "en": "What's wrong?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00730",
+      "en": "Shilin, you say...?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00737",
+      "en": "Yes... Ah! Don't tell me you don't have it?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00744",
+      "en": "Yes, we could pay in Rudra until now, so...",
+      "notes": ""
+    }
+  ],
+  "file": "s1.adx",
+  "model": "deepseek-v4-flash",
+  "prompt_version": "translation-v2-jp-context",
+  "created_at": "2026-05-30T12:06:20.328744+00:00",
+  "status": "drafted"
+}

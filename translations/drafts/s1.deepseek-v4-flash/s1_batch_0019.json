@@ -1,0 +1,150 @@
+{
+  "batch_id": "s1:batch:0019",
+  "translations": [
+    {
+      "line_id": "s1:01410",
+      "en": "What?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01413",
+      "en": "Seems the town watch doesn't get along with them.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01416",
+      "en": "Town watch?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01419",
+      "en": "Yes, the lord hired mercenaries when Levia came,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01420",
+      "en": "They're the ones hired for emergencies.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01423",
+      "en": "In case of emergency... Levia occupies this town",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01424",
+      "en": "Is that what you mean?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01427",
+      "en": "Yes, I keep telling them Levia wouldn't do that.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01428",
+      "en": "But the ones hired under those circumstances",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01429",
+      "en": "The vigilantes are hostile toward Levia's group.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01432",
+      "en": "I see...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01434",
+      "en": "After the meal, I ate the last parsley garnish",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01435",
+      "en": "I popped it into my mouth and stood up.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01438",
+      "en": "I'll work enough not to get Levia angry.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01440",
+      "en": "Seeing me stand, Shuri, who had already eaten,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01441",
+      "en": "also rose and looked at me.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01448",
+      "en": "Master",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01451",
+      "en": "I'll be back by evening. Feel free until then.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01458",
+      "en": "Yes, understood.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01460",
+      "en": "Following Shuri's prompt reply, Rinsha also stood.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01467",
+      "en": "Well, I guess I'll get back to work too.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01469",
+      "en": "Saying that, she began clearing the dishes.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01476",
+      "en": "Please take care.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01481",
+      "en": "I passed through the door past Shuri bowing,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01482",
+      "en": "I stepped into the central plaza facing the inn,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01483",
+      "en": "From inside, I could hear Shuri's voice.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01486",
+      "en": "Miss Rinsha, please let me help...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01493",
+      "en": "(Oh dear, such a diligent girl...)",
+      "notes": ""
+    }
+  ],
+  "file": "s1.adx",
+  "model": "deepseek-v4-flash",
+  "prompt_version": "translation-v2-jp-context",
+  "created_at": "2026-05-28T16:54:15.490481+00:00",
+  "status": "drafted"
+}

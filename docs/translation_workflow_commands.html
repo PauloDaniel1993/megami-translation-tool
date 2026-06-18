@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Megami Translation Workflow Commands</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.55;
+      margin: 2rem auto;
+      max-width: 980px;
+      padding: 0 1rem;
+      color: #202124;
+    }
+    h1, h2 {
+      line-height: 1.2;
+    }
+    h1 {
+      border-bottom: 2px solid #202124;
+      padding-bottom: 0.4rem;
+    }
+    pre {
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      overflow-x: auto;
+      padding: 1rem;
+    }
+    code, pre {
+      font-family: Consolas, "Courier New", monospace;
+    }
+  </style>
+</head>
+<body>
+  <h1>Megami Translation Workflow Commands</h1>
+
+  <h2>1. Build Structured Corpus</h2>
+  <p>Creates decoded inspection text, structured display pages, scenes, batches, and an HTML preview.</p>
+  <pre><code>python tools/build_corpus.py --file s1.adx</code></pre>
+
+  <p>Outputs:</p>
+  <pre><code>work/decoded_adx/s1.txt
+work/corpus/s1.scenes.json
+work/corpus/s1.pages.jsonl
+work/corpus/s1.batches.jsonl
+qa/reports/s1_corpus_preview.html</code></pre>
+
+  <h2>2. Preview DeepSeek Summary Prompts</h2>
+  <p>Dry run only; does not call the API or write production summary files.</p>
+  <pre><code>python tools/summarize_scenes.py --file s1.adx --limit-scenes 1 --dry-run</code></pre>
+
+  <p>Output:</p>
+  <pre><code>qa/reports/s1_summary_prompts.jsonl</code></pre>
+
+  <h2>3. Generate Scene Summaries</h2>
+  <p>Requires a DeepSeek API key in the environment.</p>
+  <pre><code>$env:DEEPSEEK_API_KEY = "your-key-here"
+python tools/summarize_scenes.py --file s1.adx --model deepseek-v4-flash</code></pre>
+
+  <p>Outputs:</p>
+  <pre><code>translations/context/chunk_summaries/s1.chunks.jsonl
+translations/context/scene_summaries/s1.scenes.json</code></pre>
+
+  <h2>4. Preview Translation Prompt</h2>
+  <p>Dry run only; creates a prompt report for inspection.</p>
+  <pre><code>python tools/translate_batches.py --file s1.adx --limit 1 --dry-run</code></pre>
+
+  <p>Output:</p>
+  <pre><code>qa/reports/s1_translation_prompts.jsonl</code></pre>
+
+  <h2>5. Translate Draft Batches In Parallel</h2>
+  <p>Runs DeepSeek on a limited number of medium batches. Results are written as one JSON file per batch so parallel writes are safe and resumable.</p>
+  <pre><code>python tools/translate_batches.py --file s1.adx --limit 5 --model deepseek-v4-flash --concurrency 3</code></pre>
+
+  <p>Output:</p>
+  <pre><code>translations/drafts/s1.deepseek-v4-flash/
+  s1_batch_0001.json
+  s1_batch_0002.json
+  ...</code></pre>
+
+  <h2>6. Merge Draft Batches</h2>
+  <p>Merges per-batch JSON files into JSONL for table parsing, validation, and review.</p>
+  <pre><code>python tools/merge_translation_batches.py --input-dir translations/drafts/s1.deepseek-v4-flash --output translations/drafts/s1.deepseek-v4-flash.jsonl</code></pre>
+
+  <h2>7. Validate Drafts</h2>
+  <p>Checks line IDs, CP932 encoding, 50-character line limit, and accidental Japanese text.</p>
+  <pre><code>python tools/validate_translations.py --file s1.adx --translations translations/drafts/s1.deepseek-v4-flash.jsonl</code></pre>
+
+  <p>Outputs:</p>
+  <pre><code>qa/reports/s1_validation.json
+qa/reports/s1_validation.html</code></pre>
+
+  <h2>8. Repair Failed Draft Lines</h2>
+  <p>If validation reports overlong lines or CP932 punctuation problems, generate targeted repairs instead of retranslating every batch.</p>
+  <pre><code>python tools/repair_translations.py --file s1.adx --translations translations/drafts/s1.deepseek-v4-flash.jsonl --validation-report qa/reports/s1_validation.json --output translations/repairs/s1.length_repairs.jsonl --model deepseek-v4-flash --concurrency 3</code></pre>
+
+  <p>Apply the repair output over the base draft JSONL:</p>
+  <pre><code>python tools/apply_translation_repairs.py --base translations/drafts/s1.deepseek-v4-flash.jsonl --repairs translations/repairs/s1.length_repairs.jsonl --output translations/drafts/s1.deepseek-v4-flash.repaired.jsonl</code></pre>
+
+  <p>Validate the repaired file:</p>
+  <pre><code>python tools/validate_translations.py --file s1.adx --translations translations/drafts/s1.deepseek-v4-flash.repaired.jsonl</code></pre>
+
+  <h2>9. Approve Translations</h2>
+  <p>
+    Copy reviewed batch records into <code>translations/approved/s1.approved.jsonl</code>.
+    Approved records should keep the same <code>batch_id</code> and <code>translations</code> shape.
+  </p>
+
+  <h2>10. Build Patch Jobs</h2>
+  <p>Creates patch jobs for approved lines and optional glossary-controlled speaker names.</p>
+  <pre><code>python tools/build_patch_jobs_from_translations.py --file s1.adx --translations translations/approved/s1.approved.jsonl --jobs patch_jobs/s1_translated_jobs.json --include-auto-speakers</code></pre>
+
+  <h2>11. Reinsert</h2>
+  <p>Uses the existing game management script to patch clean original ADX files.</p>
+  <pre><code>python tools/game_management.py reinsert --file s1.adx --jobs patch_jobs/s1_translated_jobs.json --out-dir patched_adx</code></pre>
+
+  <h2>Notes</h2>
+  <ul>
+    <li>Do not edit files under <code>work/</code>; regenerate them.</li>
+    <li>Human-reviewed translation state belongs under <code>translations/approved/</code> or <code>translations/manual_overrides/</code>.</li>
+    <li>Dry-run commands only write prompt reports under <code>qa/reports/</code>.</li>
+    <li>Use <code>--limit</code> for small tests before running full-file translation.</li>
+  </ul>
+</body>
+</html>

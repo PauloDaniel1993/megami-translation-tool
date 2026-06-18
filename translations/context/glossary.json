@@ -1,0 +1,71 @@
+{
+  "settings": {
+    "max_chars_per_line": 50,
+    "max_lines_total": 4,
+    "speaker_dialogue_lines": 3,
+    "dialogue_prefix": "   "
+  },
+  "characters": [
+    { "jp": "セリカ", "en": "Celica", "profile": "celica" },
+    { "jp": "シュリ", "en": "Shuri", "profile": "shuri" },
+    { "jp": "レヴィア", "en": "Levia", "profile": "levia" },
+    { "jp": "ハイシェラ", "en": "Haishera", "profile": "haishera" },
+    { "jp": "リンシャ", "en": "Rinsha", "profile": "rinsha" },
+    { "jp": "カウラ", "en": "Kaura", "profile": "kaura" },
+    { "jp": "レフィン", "en": "Refin", "profile": "refin" },
+    { "jp": "ランザブ", "en": "Ranzabu", "profile": "ranzabu" },
+    { "jp": "アリシア", "en": "Alicia", "profile": "alicia" },
+    { "jp": "ランド", "en": "Rando", "profile": "rando" },
+    { "jp": "ラクチェ", "en": "Rakuche", "profile": "rakuche" },
+    { "jp": "ニウ", "en": "Niu", "profile": "niu" },
+    { "jp": "サリア", "en": "Saria", "profile": "saria" },
+    { "jp": "グロック", "en": "Grokku", "profile": "grokku" },
+    { "jp": "ロカ", "en": "Roka", "profile": "roka" },
+    { "jp": "クーン", "en": "Kuun", "profile": "kuun" },
+    { "jp": "ミストラディ", "en": "Mistradi", "profile": "mistradi" },
+    { "jp": "ルー", "en": "Ruu", "profile": "ruu" },
+    { "jp": "イルザーブ", "en": "Ilzarb", "profile": "ilzarb" },
+    { "jp": "ウェンディス", "en": "Wendis", "profile": "wendis" },
+    { "jp": "ローレン", "en": "Roren", "profile": "roren" },
+    { "jp": "カチュア", "en": "Kachua", "profile": "kachua" },
+    { "jp": "リリエム", "en": "Liliem", "profile": "liliem" },
+    { "jp": "シュヴェルトライテ", "en": "Schwertleite", "profile": "schwertleite" },
+    { "jp": "リ・クアルー", "en": "Ri Kuaru", "profile": "ri_kuaru" },
+    { "jp": "アビルース", "en": "Abirus", "profile": "abirus" },
+    { "jp": "ドルジス", "en": "Dorjis", "profile": "dorjis" },
+    { "jp": "サウルーレ", "en": "Saulure", "profile": "saulure" },
+    { "jp": "プリル", "en": "Puril", "profile": "puril" },
+    { "jp": "オリヴド", "en": "Olivido", "profile": "olivido" },
+    { "jp": "［エウシュリーちゃん］", "en": "[Eushully-chan]", "profile": "eushully_chan" },
+    { "jp": "兵士", "en": "Soldier", "profile": "generic" },
+    { "jp": "兵士Ａ", "en": "Soldier A", "profile": "generic" },
+    { "jp": "兵士Ｂ", "en": "Soldier B", "profile": "generic" },
+    { "jp": "イベント", "en": "Event", "profile": "system" }
+  ],
+  "menu_terms": {
+    "見る": "Look",
+    "話す": "Talk",
+    "移動": "Move",
+    "セーブ": "Save",
+    "ロード": "Load",
+    "寝る": "Sleep",
+    "部屋へ戻る": "Return to Room",
+    "店を出る": "Leave",
+    "二階へ": "Upstairs",
+    "屋敷を出る": "Leave Mansion",
+    "部屋を出る": "Leave Room"
+  },
+  "locations": {
+    "ミルフェ": "Milfe",
+    "野牛の蹄亭": "Wild Bull's Hoof Inn",
+    "中央広場": "Central Plaza",
+    "領主の館": "Lord's Manor",
+    "衛兵詰所": "Guard Station"
+  },
+  "terms": {
+    "御主人様": "Master",
+    "神殺し": "God Slayer",
+    "白地龍騎士団": "White Earth Dragon Knights",
+    "イーリュン": "Iryun"
+  }
+}

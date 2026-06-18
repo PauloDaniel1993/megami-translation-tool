@@ -1,0 +1,45 @@
+{
+  "batch_id": "s1:batch:0013",
+  "translations": [
+    {
+      "line_id": "s1:01000",
+      "en": "But now, after losing power in the war,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01001",
+      "en": "if I try to use her, she'd take me over",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01002",
+      "en": "and our roles would be reversed...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01005",
+      "en": "(Still, keeping me packed away in your luggage",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01006",
+      "en": "is that not a bit too cruel?)",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01009",
+      "en": "(Sorry, I forgot.)",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01012",
+      "en": "(You really are something...)",
+      "notes": ""
+    }
+  ],
+  "file": "s1.adx",
+  "model": "deepseek-v4-flash",
+  "prompt_version": "translation-v2-jp-context",
+  "created_at": "2026-05-28T16:52:26.493202+00:00",
+  "status": "drafted"
+}

@@ -1,0 +1,200 @@
+{
+  "batch_id": "s1:batch:0005",
+  "translations": [
+    {
+      "line_id": "s1:00313",
+      "en": "For now, I'll brief you on the findings.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00314",
+      "en": "Come with me.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00317",
+      "en": "Where to?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00319",
+      "en": "As Levia turned, Shuri, though loaded with bags,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00320",
+      "en": "reached out to take the bags I was holding as well",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00321",
+      "en": "I dodged Shuri and asked casually.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00322",
+      "en": "The vague answer I got was unexpected.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00325",
+      "en": "I commandeered the lord's mansion for the search HQ.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00327",
+      "en": "Commandeering and looting are things Levia hates most.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00328",
+      "en": "Moreover, Milfe--visited for the princess search--",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00329",
+      "en": "is not Lewinian territory; it could be seen as",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00330",
+      "en": "an invasion.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00333",
+      "en": "What happened?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00336",
+      "en": "...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00338",
+      "en": "From beside the silent Levia, a man stepped out.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00345",
+      "en": "Lord Celica, that was by knights who admire Levia",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00346",
+      "en": "It was carried out by some common-born knights.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00351",
+      "en": "Lord Ranzabu--vice-commander of Levia's knights,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00352",
+      "en": "he is a man with many dark rumors.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00357",
+      "en": "They wanted General Levia to work in comfort,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00358",
+      "en": "but they went overboard, it seems.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00360",
+      "en": "Ranzabu shook his head, feigning distress.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00363",
+      "en": "We paid the lord of this town a proper sum",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00364",
+      "en": "and arranged to rent the mansion.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00367",
+      "en": "Because those common knights lacked consideration,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00368",
+      "en": "we are treated as invaders in this town.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00370",
+      "en": "Indeed, in the eyes of the watching townspeople,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00371",
+      "en": "there is little goodwill.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00378",
+      "en": "Enough, Lord Ranzabu. It's all settled...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00385",
+      "en": "Yes, that is true.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00386",
+      "en": "I overstepped and spoke presumptuously.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00387",
+      "en": "Please forgive me.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00389",
+      "en": "In Ranzabu's words,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00390",
+      "en": "there was a note of blame toward Levia.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00392",
+      "en": "A snake in the grass...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00394",
+      "en": "This Ranzabu--he was promoted by nobles who resent",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00395",
+      "en": "the fact that Levia is a female general.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00396",
+      "en": "I hear.",
+      "notes": ""
+    }
+  ],
+  "file": "s1.adx",
+  "model": "deepseek-v4-flash",
+  "prompt_version": "translation-v2-jp-context",
+  "created_at": "2026-05-30T12:06:54.717849+00:00",
+  "status": "drafted"
+}

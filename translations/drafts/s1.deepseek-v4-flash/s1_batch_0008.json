@@ -1,0 +1,185 @@
+{
+  "batch_id": "s1:batch:0008",
+  "translations": [
+    {
+      "line_id": "s1:00514",
+      "en": "The shop woman",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00515",
+      "en": "Welcome.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00517",
+      "en": "A woman's bright voice greets us as we step inside.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00519",
+      "en": "The shop woman",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00520",
+      "en": "Two of you? That seat is free.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00522",
+      "en": "She looks around the nearly full lunchtime shop,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00523",
+      "en": "The shop woman at the counter pointed to",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00524",
+      "en": "two empty seats.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00531",
+      "en": "Um, excuse me, is the owner of this shop...?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00537",
+      "en": "The shop woman",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00538",
+      "en": "Being called 'Master' is a bit embarrassing, but",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00539",
+      "en": "That's me.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00546",
+      "en": "Ah, s-sorry!",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00552",
+      "en": "The shopkeeper",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00553",
+      "en": "Hehe, you don't have to apologize.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00554",
+      "en": "So, what do you need from me?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00561",
+      "en": "Ah, no, um, do you have a room available?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00567",
+      "en": "The shopkeeper",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00568",
+      "en": "You're lodging guests? Then come to the counter.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00575",
+      "en": "Yes.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00577",
+      "en": "When we come to the empty seats at the counter,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00578",
+      "en": "The shopkeeper, behind counter, pulls out a ledger.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00579",
+      "en": "and turns to face us.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00585",
+      "en": "The shopkeeper",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00586",
+      "en": "I forgot to introduce myself. I'm Rinsha.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00587",
+      "en": "And what are your names?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00594",
+      "en": "Yes, this is Lord Celica Silfil,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00595",
+      "en": "and I am his servant, Shuri.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00602",
+      "en": "A servant? Your clothes do show that.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00609",
+      "en": "Yes.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00611",
+      "en": "Smoothly, Rinsha writes our names into the ledger.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00618",
+      "en": "So, a room? A double room is free.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00625",
+      "en": "N-no, not at all.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00626",
+      "en": "Um, separate rooms...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00632",
+      "en": "Rinsha tilts her head at Shuri's fluster.",
+      "notes": ""
+    }
+  ],
+  "file": "s1.adx",
+  "model": "deepseek-v4-flash",
+  "prompt_version": "translation-v2-jp-context",
+  "created_at": "2026-05-30T12:06:26.670065+00:00",
+  "status": "drafted"
+}

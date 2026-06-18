@@ -1,0 +1,130 @@
+{
+  "batch_id": "s1:batch:0017",
+  "translations": [
+    {
+      "line_id": "s1:01273",
+      "en": "Ah, then I'll have the same as Master...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01275",
+      "en": "Just Shuri's typical response.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01282",
+      "en": "I see, huh.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01284",
+      "en": "Rinsha nodded slowly, then",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01285",
+      "en": "elbowed my back and walked to the kitchen.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01292",
+      "en": "?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01299",
+      "en": "Soon after, Rinsha returned with three meals.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01302",
+      "en": "I haven't eaten yet. Can I join you?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01304",
+      "en": "She said that while placing three dishes on the table.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01307",
+      "en": "Yeah.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01310",
+      "en": "Thanks.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01312",
+      "en": "As I answered, she gave a brisk smile,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01313",
+      "en": "sat down across from me,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01314",
+      "en": "and fired off rapid questions...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01317",
+      "en": "So what brought you two to this town?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01320",
+      "en": "Recuperation.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01323",
+      "en": "Oh, but earlier, by my place with Levia,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01324",
+      "en": "weren't you talking?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01327",
+      "en": "Does Levia come here often?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01330",
+      "en": "Yeah, she's a regular. Just as I thought...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01333",
+      "en": "What do you mean?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01336",
+      "en": "So the man who never showed up was you, Celica.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01339",
+      "en": "Did Levia say that?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01342",
+      "en": "Yeah, she was mad: 'What do you think the mission is?'",
+      "notes": ""
+    }
+  ],
+  "file": "s1.adx",
+  "model": "deepseek-v4-flash",
+  "prompt_version": "translation-v2-jp-context",
+  "created_at": "2026-05-28T16:53:12.613170+00:00",
+  "status": "drafted"
+}

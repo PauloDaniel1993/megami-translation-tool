@@ -1,0 +1,115 @@
+{
+  "batch_id": "s1:batch:0011",
+  "translations": [
+    {
+      "line_id": "s1:00845",
+      "en": "A deposit?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00848",
+      "en": "If we leave without paying for the room,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00849",
+      "en": "you can keep that jewel.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00852",
+      "en": "So if I pay, I give the jewel back?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00855",
+      "en": "Right.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00858",
+      "en": "I see. In that case, forget one week--",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00859",
+      "en": "stay as long as you like.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00862",
+      "en": "Yeah. We'll do that.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00865",
+      "en": "Heheh. Then I'll show you to your room.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00876",
+      "en": "Rinsha starts walking toward the stairs to the second floor.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00882",
+      "en": "Um, Master...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00885",
+      "en": "What is it?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00888",
+      "en": "Are you sure that was wise?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00889",
+      "en": "That jewel from the Water Priestess was very...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00892",
+      "en": "Was it?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00895",
+      "en": "Yes. If I recall, it was valuable enough to",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00896",
+      "en": "let someone live in leisure for a lifetime...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00899",
+      "en": "...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00905",
+      "en": "Master?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00908",
+      "en": "...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00913",
+      "en": "Where are you going, Master?",
+      "notes": ""
+    }
+  ],
+  "file": "s1.adx",
+  "model": "deepseek-v4-flash",
+  "prompt_version": "translation-v2-jp-context",
+  "created_at": "2026-05-28T16:51:57.655660+00:00",
+  "status": "drafted"
+}

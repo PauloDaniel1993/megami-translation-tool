@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Megami Translation Process Decisions</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.55;
+      margin: 2rem auto;
+      max-width: 980px;
+      padding: 0 1rem;
+      color: #202124;
+      background: #ffffff;
+    }
+    h1, h2 {
+      line-height: 1.2;
+    }
+    h1 {
+      border-bottom: 2px solid #202124;
+      padding-bottom: 0.4rem;
+    }
+    h2 {
+      margin-top: 2rem;
+      border-bottom: 1px solid #d0d0d0;
+      padding-bottom: 0.25rem;
+    }
+    code, pre {
+      font-family: Consolas, "Courier New", monospace;
+    }
+    pre {
+      background: #f5f5f5;
+      border: 1px solid #dddddd;
+      border-radius: 6px;
+      overflow-x: auto;
+      padding: 1rem;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1rem 0;
+    }
+    th, td {
+      border: 1px solid #d0d0d0;
+      padding: 0.5rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f0f0f0;
+    }
+    .note {
+      background: #fff8d9;
+      border: 1px solid #e1cc78;
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Megami Translation Process Decisions</h1>
+
+  <p>
+    This document records the agreed plan for organizing the Megami translation project.
+    The previous extractor and notes remain useful evidence, but the new process should be built
+    around structured scenes, pages, line targets, validation, and repeatable DeepSeek API calls.
+  </p>
+
+  <h2>Primary Goal</h2>
+  <p>
+    Build a translation workflow that is pleasant to use, resumable, technically safe, and able to
+    preserve character tone. The first milestone is a pilot patch for <code>s1.adx</code>, starting
+    with roughly the first 100 pages before scaling to the full file.
+  </p>
+
+  <h2>Repository Organization</h2>
+  <pre><code>tools/
+  game_management.py
+  build_corpus.py
+  summarize_scenes.py
+  translate_batches.py
+  validate_translations.py
+  build_patch_jobs_from_translations.py
+
+docs/
+  translation_process_decisions.html
+
+work/
+  decoded_adx/
+  corpus/
+
+translations/
+  context/
+    glossary.json
+    global_style.md
+    characters/
+    scene_summaries/
+    chunk_summaries/
+  blocks/
+  batches/
+  drafts/
+  approved/
+  manual_overrides/
+
+qa/
+  reports/
+  screenshots/
+
+patched_adx/</code></pre>
+
+  <p class="note">
+    Generated files under <code>work/</code>, <code>qa/</code>, and <code>patched_adx/</code>
+    should be disposable. Human-owned translation state belongs under <code>translations/</code>.
+  </p>
+
+  <h2>Extractor Redesign</h2>
+  <p>
+    The extractor should become a structured corpus builder, not just a Japanese-line scraper.
+    It should decode ADX files and classify the script into scenes, pages, commands, labels,
+    speakers, dialogue, narration, and UI text.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Unit</th>
+        <th>Definition</th>
+        <th>Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Scene</td>
+        <td>Normally starts at a useful <code>*+</code> label. If a file has no such labels, create synthetic scenes.</td>
+        <td>Broad context, summary, active characters, translation continuity.</td>
+      </tr>
+      <tr>
+        <td>Page</td>
+        <td>Script content ending at <code>@h</code>.</td>
+        <td>Textbox pacing and display constraints.</td>
+      </tr>
+      <tr>
+        <td>Line</td>
+        <td>Original decoded script line with a stable file/line target.</td>
+        <td>Exact reinsertion and validation.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Line Targeting</h2>
+  <p>
+    Every translatable line should be targeted by file, decoded line number, and source hash.
+    Text content alone must not be used as a patch target because repeated strings are common.
+  </p>
+
+  <pre><code>{
+  "line_id": "s1:00089",
+  "file": "s1.adx",
+  "line_number": 89,
+  "source_hash": "sha1-of-original-source-line",
+  "jp": "　　やっと着きましたね、御主人様",
+  "en": "",
+  "role": "dialogue",
+  "speaker_jp": "シュリ",
+  "speaker_en": "Shuri",
+  "status": "pending"
+}</code></pre>
+
+  <h2>Textbox Rules</h2>
+  <ul>
+    <li>Safe maximum: 50 visible English characters per textbox line.</li>
+    <li>Textbox supports 4 lines total.</li>
+    <li>If a page has a speaker, the speaker occupies its own line.</li>
+    <li>Dialogue starts on the next visible line after the speaker.</li>
+    <li>Speaker pages therefore have at most 3 dialogue lines available.</li>
+    <li>Narration pages have at most 4 text lines available.</li>
+    <li>For the pilot, preserve the source layout instead of merging speaker and dialogue onto one line.</li>
+  </ul>
+
+  <h2>DeepSeek Workflow</h2>
+  <p>
+    Use direct DeepSeek API scripts rather than manual copy/paste. Keep the API translation script
+    separate from extraction and reinsertion.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Task</th>
+        <th>Recommended Model</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Scene/chunk summaries</td>
+        <td><code>deepseek-v4-flash</code></td>
+        <td>Internal and reviewable; use Pro only for confusing scenes.</td>
+      </tr>
+      <tr>
+        <td>Draft translation</td>
+        <td><code>deepseek-v4-flash</code></td>
+        <td>Medium batches, low temperature, strict JSON output.</td>
+      </tr>
+      <tr>
+        <td>Difficult review/final pass</td>
+        <td><code>deepseek-v4-pro</code></td>
+        <td>Use for character-heavy, ambiguous, lore-heavy, or sensitive scenes.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Batch Size</h2>
+  <p>
+    Use medium batches: about 15 to 25 pages per translation call, roughly 30 to 70 translatable
+    lines, without crossing scene boundaries. Each call should include previous and next context,
+    but only the current batch should be returned for translation.
+  </p>
+
+  <pre><code>Prompt context:
+- global translation rules
+- glossary entries
+- compact relevant character voice cards
+- scene summary
+- current chunk summary
+- previous 2 pages as read-only context
+- current 15-25 pages to translate
+- next 1 page as read-only context
+- strict JSON response schema</code></pre>
+
+  <h2>Scene Context Generation</h2>
+  <p>
+    DeepSeek should generate scene context in a separate pre-translation pass. Summaries should be
+    saved as JSON and reused by translation calls. Translation calls should not invent new scene
+    context each time.
+  </p>
+
+  <pre><code>{
+  "scene_id": "s1:scene:0001",
+  "scene_title_jp": "一日目ミルフェの街",
+  "scene_title_en": "Day One: Milfe",
+  "scene_summary": "Celica and Shuri arrive in Milfe after a difficult journey. Celica notices a fatigue-induced change in his body and hides it from Shuri while deciding to find lodging.",
+  "timeline": [
+    "Celica arrives in Milfe and observes the city.",
+    "He notices a physical change caused by fatigue.",
+    "Shuri joins him and asks what is wrong.",
+    "Celica deflects and decides to find an inn."
+  ],
+  "active_characters": ["Celica", "Shuri"],
+  "tone_notes": [
+    "Celica's narration is dry and self-contained.",
+    "Shuri is polite and concerned."
+  ],
+  "status": "draft"
+}</code></pre>
+
+  <h2>Translation State</h2>
+  <p>
+    Keep model drafts separate from approved translations. Only approved translations should become
+    patch jobs.
+  </p>
+
+  <pre><code>pending
+drafted
+validated
+needs_review
+approved
+patched
+tested</code></pre>
+
+  <h2>Validation Before Patching</h2>
+  <ul>
+    <li>All expected <code>line_id</code> values are present.</li>
+    <li>No duplicate or unknown <code>line_id</code> values appear.</li>
+    <li>Source hashes match the current decoded source.</li>
+    <li>English text is strict CP932 encodable.</li>
+    <li>Line length stays within 50 visible characters.</li>
+    <li>Speaker pages stay within 3 dialogue lines.</li>
+    <li>Narration pages stay within 4 text lines.</li>
+    <li>Speaker names match the glossary.</li>
+    <li>No Japanese remains in English fields unless explicitly allowed.</li>
+  </ul>
+
+  <h2>Glossary And Style</h2>
+  <p>
+    The glossary is authoritative for character names, place names, menu terms, address terms,
+    spells, items, and recurring terminology. DeepSeek should not invent romanizations.
+  </p>
+
+  <p>
+    The large character profile document should be condensed into compact character voice cards.
+    Translation calls should include only the relevant cards for the current batch.
+  </p>
+
+  <h2>Separate Queues</h2>
+  <p>
+    Do not mix every text type into one translation queue. Use separate handling for:
+  </p>
+
+  <ul>
+    <li>Story dialogue and narration.</li>
+    <li>Menu/UI commands such as <code>@cmf</code>.</li>
+    <li>Location/title commands such as <code>@maptitl</code>.</li>
+    <li>System text.</li>
+    <li>Bonus or staff-room content.</li>
+    <li>Script labels, which should remain unchanged unless proven visible.</li>
+  </ul>
+
+  <h2>Next Implementation Step</h2>
+  <p>
+    Build <code>tools/build_corpus.py</code> for <code>s1.adx</code> first. It should produce
+    structured scenes, pages, speaker detection, textbox constraints, line hashes, and JSONL output.
+    After inspecting that output, build the summary and DeepSeek translation scripts.
+  </p>
+</body>
+</html>

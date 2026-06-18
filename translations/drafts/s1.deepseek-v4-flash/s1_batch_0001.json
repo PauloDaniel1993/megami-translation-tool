@@ -1,0 +1,180 @@
+{
+  "batch_id": "s1:batch:0001",
+  "translations": [
+    {
+      "line_id": "s1:00009",
+      "en": "Milfe, a port... remote, rich in marine and mining,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00010",
+      "en": "Also thrives as trade hub, independent city.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00012",
+      "en": "I arrived at this town, our journey's destination,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00013",
+      "en": "I stopped as I entered the central plaza.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00015",
+      "en": "Our ship to this town ran aground,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00016",
+      "en": "Walking overland, my body felt at the destination",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00017",
+      "en": "a pleasant fatigue from the relief of arrival.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00019",
+      "en": "I rarely tire, so this new sensation felt good.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00022",
+      "en": "......?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00024",
+      "en": "Feeling odd, I opened my collar and peeked.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00030",
+      "en": "...............................",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00032",
+      "en": "I am a man, but there, though faint, is",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00033",
+      "en": "a bulge that a man should not have.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00036",
+      "en": "...............................",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00039",
+      "en": "(I had forgotten...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00040",
+      "en": "I should not overdo it...)",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00042",
+      "en": "I chide myself of this bodily change from fatigue.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00045",
+      "en": "We finally arrived, Master.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00051",
+      "en": "At that, I closed my shirt, looked up, turned.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00053",
+      "en": "A girl with a large pack looks up at me.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00054",
+      "en": "Her name is Shuri. For various reasons,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00055",
+      "en": "she is my live-in servant, along for this journey.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00057",
+      "en": "She was orphaned by war; I took her in.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00058",
+      "en": "Since then, she has worked as a servant at home,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00059",
+      "en": "mainly taking care of my personal needs.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00061",
+      "en": "Having worked here since childhood among servants,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00062",
+      "en": "she is especially obedient, devoted, and capable,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00063",
+      "en": "Lately, she has become more calm with age,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00064",
+      "en": "she keeps her distance now, which makes me lonely.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00067",
+      "en": "Is something wrong, Master?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00070",
+      "en": "No, it's nothing...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00075",
+      "en": "Shuri is staring at me.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00077",
+      "en": "That anxious look is the same as when I found her",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00078",
+      "en": "on the battlefield a decade ago, it hasn't changed.",
+      "notes": ""
+    }
+  ],
+  "file": "s1.adx",
+  "model": "deepseek-v4-flash",
+  "prompt_version": "translation-v2-jp-context",
+  "created_at": "2026-05-30T12:07:16.737824+00:00",
+  "status": "drafted"
+}

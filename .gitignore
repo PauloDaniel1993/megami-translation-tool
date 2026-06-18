@@ -1,0 +1,41 @@
+# Original game files and binary assets
+*.adx
+*.bmx
+*.wav
+*.dxg
+*.exe
+*.BIN
+*.bin
+*.dat
+*.dic
+*.map
+*.org
+*.old
+*.ini
+*.before-*
+
+# Patched/generated game outputs
+patched_adx/
+patched_adx_*/
+patched_exe/
+work/clean_source/
+work/decoded_adx/
+
+# Generated reports and patch jobs
+patch_jobs/
+qa/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# React app local files
+translation_tool/node_modules/
+translation_tool/dist/
+translation_tool/.env
+translation_tool/backups/
+translation_tool/*.log
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

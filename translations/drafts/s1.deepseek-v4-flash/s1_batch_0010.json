@@ -1,0 +1,145 @@
+{
+  "batch_id": "s1:batch:0010",
+  "translations": [
+    {
+      "line_id": "s1:00746",
+      "en": "Come to think of it, when we left Lewinia, Levia",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00747",
+      "en": "that the currency used in this town is different.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00754",
+      "en": "Oh, in this town you can't use Rudra.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00761",
+      "en": "I'll go exchange it.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00768",
+      "en": "No way.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00775",
+      "en": "Huh?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00782",
+      "en": "Three days ago, the Lewinian army came,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00783",
+      "en": "and they all exchanged currency, so",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00784",
+      "en": "the exchange's vault got filled with Rudra.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00791",
+      "en": "What!",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00798",
+      "en": "So yesterday, all the exchange staff,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00799",
+      "en": "said they'd go exchange in another town and left.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00806",
+      "en": "That's...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00808",
+      "en": "I put a hand on the flustered Shuri's shoulder and",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00809",
+      "en": "stepped forward to Rinsha the innkeeper.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00812",
+      "en": "Ah, Master...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00815",
+      "en": "Can you pay with this?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00817",
+      "en": "I pulled a jewel from my pocket and held it out.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00824",
+      "en": "What's this? A jewel?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00826",
+      "en": "No wonder she's surprised. It's redder than blood,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00827",
+      "en": "The jewel shines clear without a single cloud,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00828",
+      "en": "and is larger than her wide-open eyes.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00830",
+      "en": "I think it was enough to live idly for a year.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00833",
+      "en": "You planning to buy the whole inn?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00836",
+      "en": "I have no such intention.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00839",
+      "en": "Then... I can't accept such a precious jewel.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00842",
+      "en": "Then treat it as a deposit.",
+      "notes": ""
+    }
+  ],
+  "file": "s1.adx",
+  "model": "deepseek-v4-flash",
+  "prompt_version": "translation-v2-jp-context",
+  "created_at": "2026-05-30T12:06:22.194589+00:00",
+  "status": "drafted"
+}

@@ -1,0 +1,180 @@
+{
+  "batch_id": "s1:batch:0006",
+  "translations": [
+    {
+      "line_id": "s1:00398",
+      "en": "Probably the knights who admired Levia,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00399",
+      "en": "Ranzabu likely had a hand in it.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00405",
+      "en": "Ranzabu bowed politely to Levia as she turned,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00406",
+      "en": "then resumed his position behind Levia.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00409",
+      "en": "So, you're going to that mansion now?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00412",
+      "en": "Yeah.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00415",
+      "en": "Then go ahead, I'll find us an inn.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00418",
+      "en": "If that's the case...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00419",
+      "en": "No, you're right. Understood...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00424",
+      "en": "Levia briefly looks wounded, then turns away.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00425",
+      "en": "She shows a slightly dejected expression,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00426",
+      "en": "then in the next moment, she leaves.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00428",
+      "en": "I understand what Levia wanted to say.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00429",
+      "en": "They probably have rooms prepared for us there.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00430",
+      "en": "But sorry, Levia, I'd rather not get",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00431",
+      "en": "dragged into needless trouble.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00433",
+      "en": "Because Levia understands that as well,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00434",
+      "en": "she left without saying anything.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00444",
+      "en": "Shuri stares intently at Levia leaving.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00447",
+      "en": "Miss Levia...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00449",
+      "en": "Levia, though a woman, holds the rank of general,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00450",
+      "en": "and always shoulders needless trouble for it.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00452",
+      "en": "Shuri, ignorant of the military, cannot grasp",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00453",
+      "en": "and that reminds her of her own powerlessness.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00454",
+      "en": "On Shuri's face watching Levia leave,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00455",
+      "en": "a look of concern for her appears.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00457",
+      "en": "So much for a slow recovery.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00460",
+      "en": "It's fine...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00463",
+      "en": "Master?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00466",
+      "en": "...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00469",
+      "en": "You're right.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00471",
+      "en": "Though my words were few, that one line",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00472",
+      "en": "seems to have eased Shuri's anxiety a bit.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:00477",
+      "en": "Shuri turns back to me, waiting for my words.",
+      "notes": ""
+    }
+  ],
+  "file": "s1.adx",
+  "model": "deepseek-v4-flash",
+  "prompt_version": "translation-v2-jp-context",
+  "created_at": "2026-05-30T12:07:08.068868+00:00",
+  "status": "drafted"
+}

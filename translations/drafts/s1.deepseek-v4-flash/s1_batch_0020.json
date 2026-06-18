@@ -1,0 +1,15 @@
+{
+  "batch_id": "s1:batch:0020",
+  "translations": [
+    {
+      "line_id": "s1:01496",
+      "en": "...",
+      "notes": ""
+    }
+  ],
+  "file": "s1.adx",
+  "model": "deepseek-v4-flash",
+  "prompt_version": "translation-v2-jp-context",
+  "created_at": "2026-05-28T16:53:07.820708+00:00",
+  "status": "drafted"
+}

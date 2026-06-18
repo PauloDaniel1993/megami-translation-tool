@@ -1,0 +1,155 @@
+{
+  "batch_id": "s1:batch:0016",
+  "translations": [
+    {
+      "line_id": "s1:01175",
+      "en": "So, Shuri, what will you have?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01182",
+      "en": "Ah, I'll have mine after my Master.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01184",
+      "en": "Saying that, Shuri stood diagonally behind me.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01191",
+      "en": "What's wrong, Shuri?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01193",
+      "en": "Rinsha called out to Shuri curiously.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01200",
+      "en": "Yes, allow me to serve.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01207",
+      "en": "Serve...?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01209",
+      "en": "Rinsha's eyes, now dots, turned to me.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01212",
+      "en": "Shuri, sit down.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01219",
+      "en": "But, Master...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01221",
+      "en": "This is the usual exchange...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01222",
+      "en": "Whenever we eat out, Shuri always does this.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01223",
+      "en": "She tries to volunteer as a server.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01225",
+      "en": "If left alone, she'd serve perfectly, but...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01226",
+      "en": "At the mansion it's fine, but in a restaurant...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01227",
+      "en": "It's extremely conspicuous...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01234",
+      "en": "That's right, Shuri. Our food isn't so hard",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01235",
+      "en": "that you need to stand and serve.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01236",
+      "en": "Besides, it'd be sad to make your Master eat alone.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01243",
+      "en": "...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01246",
+      "en": "Shuri.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01249",
+      "en": "Yes, as you wish...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01251",
+      "en": "Urged, Shuri finally stepped from behind me...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01252",
+      "en": "Shuri's posture as she sat down awkwardly...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01253",
+      "en": "It wasn't reluctance, but rather nervousness.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01256",
+      "en": "I'll have this.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01258",
+      "en": "I looked at Shuri, cheeks flushed and head down,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01259",
+      "en": "I pointed to the dish Rinsha recommended.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01266",
+      "en": "Yes, and you, Shuri?",
+      "notes": ""
+    }
+  ],
+  "file": "s1.adx",
+  "model": "deepseek-v4-flash",
+  "prompt_version": "translation-v2-jp-context",
+  "created_at": "2026-05-28T16:53:52.720927+00:00",
+  "status": "drafted"
+}

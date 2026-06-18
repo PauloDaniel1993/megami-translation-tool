@@ -1,0 +1,170 @@
+{
+  "batch_id": "s1:batch:0015",
+  "translations": [
+    {
+      "line_id": "s1:01101",
+      "en": "Yeah.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01104",
+      "en": "Hmm, having that many servants...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01105",
+      "en": "Celica, are you perhaps nobility?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01108",
+      "en": "No.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01111",
+      "en": "Then, who are you?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01113",
+      "en": "Without answering, I went to a table that was clearing.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01114",
+      "en": "I sat at a nearby table in the dining hall.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01116",
+      "en": "She thought my silence meant I would not talk.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01117",
+      "en": "Rinsha silently brought a menu from the counter",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01118",
+      "en": "and placed it before me.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01121",
+      "en": "I guarantee the taste.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01123",
+      "en": "Rinsha, beaming, puffed out her ample chest.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01124",
+      "en": "She showed off her full chest even more.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01125",
+      "en": "The cooking aroma filling the dining hall was",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01126",
+      "en": "enough to stimulate my appetite.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01129",
+      "en": "True...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01130",
+      "en": "Something light and small in portion...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01133",
+      "en": "You order like a girl... then try this.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01135",
+      "en": "Rinsha's finger pointed to a dish on the menu.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01138",
+      "en": "I see.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01141",
+      "en": "So, Shuri...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01144",
+      "en": "She'll be here soon.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01146",
+      "en": "No sooner said, Shuri came down the stairs",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01147",
+      "en": "with quiet yet hurried steps.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01150",
+      "en": "Oh, really...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01152",
+      "en": "Her quiet, hurried steps... when Shuri was a child,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01153",
+      "en": "she often used to run up to me,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01154",
+      "en": "so I warned her she might fall and get hurt,",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01155",
+      "en": "and she's walked like this ever since.",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01162",
+      "en": "I'm sorry for keeping you waiting...",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01169",
+      "en": "It's fine, right, Celica?",
+      "notes": ""
+    },
+    {
+      "line_id": "s1:01172",
+      "en": "Yeah.",
+      "notes": ""
+    }
+  ],
+  "file": "s1.adx",
+  "model": "deepseek-v4-flash",
+  "prompt_version": "translation-v2-jp-context",
+  "created_at": "2026-05-28T16:53:13.071047+00:00",
+  "status": "drafted"
+}
