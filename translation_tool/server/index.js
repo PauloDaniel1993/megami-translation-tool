@@ -16,6 +16,21 @@ const exeSignatureOffset = 0x72f61;
 const originalExeSignature = Buffer.from("80fb270f8446020000", "hex");
 const patchedExeSignature = Buffer.from("80fb27909090909090", "hex");
 const exeSourceCandidates = ["main.exe.before-apostrophe-test", "main.org", "main.exe"];
+const localeEmulatorPathCandidates = [
+  process.env.LOCALE_EMULATOR_PATH,
+  process.env.LEPROC_PATH,
+  path.join(projectRoot, "LEProc.exe"),
+  path.join(projectRoot, "Locale Emulator", "LEProc.exe"),
+  path.join(projectRoot, "tools", "Locale Emulator", "LEProc.exe"),
+  path.join(process.env.ProgramFiles || "C:\\Program Files", "Locale Emulator", "LEProc.exe"),
+  path.join(process.env.ProgramFiles || "C:\\Program Files", "Locale.Emulator", "LEProc.exe"),
+  path.join(process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)", "Locale Emulator", "LEProc.exe"),
+  path.join(process.env.LOCALAPPDATA || "", "Locale Emulator", "LEProc.exe"),
+  ...(process.env.PATH || "")
+    .split(path.delimiter)
+    .filter(Boolean)
+    .map((dir) => path.join(dir, "LEProc.exe")),
+].filter(Boolean);
 
 function isInside(root, target) {
   const relative = path.relative(root, target);
@@ -44,6 +59,27 @@ function timestampId() {
 
 function profileSlug(profile) {
   return profile === "apostrophe-patched" ? "apostrophes" : "vanilla";
+}
+
+function summarizeOverflowReport(report, relativePath) {
+  const overflowPages = Array.isArray(report?.overflow_pages) ? report.overflow_pages : [];
+  const wrappedLines = Array.isArray(report?.wrapped_lines) ? report.wrapped_lines : [];
+  const insertedWindows = overflowPages.reduce((total, page) => total + Number(page.inserted_windows || 0), 0);
+  return {
+    exists: Boolean(report),
+    path: relativePath,
+    overflowPages: overflowPages.length,
+    insertedWindows,
+    wrappedLines: wrappedLines.length,
+    pages: overflowPages.map((page) => ({
+      page_id: page.page_id,
+      line_start: page.line_start,
+      line_end: page.line_end,
+      used_lines: page.used_lines,
+      max_lines: page.max_lines,
+      inserted_windows: page.inserted_windows,
+    })),
+  };
 }
 
 function safeSuggestionName(lineId) {
@@ -77,6 +113,18 @@ async function exists(filePath) {
   } catch {
     return false;
   }
+}
+
+async function findLocaleEmulator() {
+  const seen = new Set();
+  for (const candidate of localeEmulatorPathCandidates) {
+    const resolved = path.resolve(candidate);
+    const key = resolved.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (await exists(resolved)) return resolved;
+  }
+  return null;
 }
 
 async function readJson(filePath, fallback = null) {
@@ -468,8 +516,20 @@ async function callDeepSeek(prompt, model, temperature) {
 const app = express();
 app.use(express.json({ limit: "20mb" }));
 
-app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, projectRoot, toolRoot, deepseekConfigured: Boolean(process.env.DEEPSEEK_API_KEY) });
+app.get("/api/health", async (_req, res, next) => {
+  try {
+    const localeEmulatorPath = await findLocaleEmulator();
+    res.json({
+      ok: true,
+      projectRoot,
+      toolRoot,
+      deepseekConfigured: Boolean(process.env.DEEPSEEK_API_KEY),
+      localeEmulatorConfigured: Boolean(localeEmulatorPath),
+      localeEmulatorPath,
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.get("/api/files", async (_req, res, next) => {
@@ -500,9 +560,12 @@ app.get("/api/files/:stem", async (req, res, next) => {
   try {
     const stem = safeStem(req.params.stem);
     const textProfile = textProfiles.includes(req.query.textProfile) ? req.query.textProfile : "apostrophe-patched";
+    const slug = profileSlug(textProfile);
     const corpus = await loadCorpus(stem);
     const { approvedPath, records, translations } = await loadTranslationRecords(stem);
     const translationPrompts = await loadTranslationPrompts(stem);
+    const overflowReportRelative = path.join("patch_jobs", `${stem}_translated_jobs.${slug}.overflow_report.json`);
+    const overflowReport = await readJson(projectPath(overflowReportRelative), null);
     const rows = buildRows(corpus, translations).map((row) => ({
       ...row,
       issues: lineIssues(row, textProfile),
@@ -517,6 +580,7 @@ app.get("/api/files/:stem", async (req, res, next) => {
       scenes: corpus.scenes,
       sceneSummaries: Array.isArray(corpus.sceneSummaries) ? corpus.sceneSummaries : [],
       translationPrompts,
+      overflowReport: summarizeOverflowReport(overflowReport, overflowReportRelative),
       batches: corpus.batches.map((batch) => ({
         batch_id: batch.batch_id,
         batch_index: batch.batch_index,
@@ -592,6 +656,7 @@ app.post("/api/workflows/validate", async (req, res, next) => {
       `translations/approved/${stem}.approved.jsonl`,
       "--text-profile",
       textProfile,
+      "--allow-window-overflow",
       "--strict",
     ]);
     const report = await readJson(projectPath("qa", "reports", `${stem}_validation.json`), null);
@@ -616,8 +681,11 @@ app.post("/api/workflows/build-jobs", async (req, res, next) => {
       "--jobs",
       jobs,
       "--include-auto-speakers",
+      "--auto-window-overflow",
     ]);
-    res.json({ ...result, jobs });
+    const overflowReportRelative = path.join("patch_jobs", `${stem}_translated_jobs.${slug}.overflow_report.json`);
+    const overflowReport = await readJson(projectPath(overflowReportRelative), null);
+    res.json({ ...result, jobs, overflowReport: summarizeOverflowReport(overflowReport, overflowReportRelative) });
   } catch (error) {
     next(error);
   }
@@ -721,18 +789,38 @@ app.post("/api/install", async (req, res, next) => {
     if (installAdx) {
       await copyWithParents(projectPath(`patched_adx_${slug}`, "variable", `${stem}.adx`), projectPath(`${stem}.adx`));
     }
-    res.json({ ok: true, backupId, backups: backups.filter(Boolean) });
+    res.json({
+      ok: true,
+      backupId,
+      installFolder: projectRoot,
+      installedFiles: [
+        installExe ? path.join(projectRoot, "main.exe") : null,
+        installAdx ? path.join(projectRoot, `${stem}.adx`) : null,
+      ].filter(Boolean),
+      backups: backups.filter(Boolean),
+    });
   } catch (error) {
     next(error);
   }
 });
 
-app.post("/api/launch", async (_req, res, next) => {
+app.post("/api/launch", async (req, res, next) => {
   try {
     const exe = projectPath("main.exe");
-    const child = spawn(exe, [], { cwd: projectRoot, detached: true, stdio: "ignore", windowsHide: false });
+    const useLocaleEmulator = req.body?.useLocaleEmulator !== false;
+    const localeEmulator = useLocaleEmulator ? await findLocaleEmulator() : null;
+    const command = localeEmulator || exe;
+    const args = localeEmulator ? [exe] : [];
+    const child = spawn(command, args, { cwd: projectRoot, detached: true, stdio: "ignore", windowsHide: false });
     child.unref();
-    res.json({ ok: true, pid: child.pid });
+    res.json({
+      ok: true,
+      pid: child.pid,
+      launcher: localeEmulator ? "Locale Emulator" : "direct",
+      locale: localeEmulator ? "ja-JP" : "system",
+      localeEmulatorPath: localeEmulator,
+      executable: exe,
+    });
   } catch (error) {
     next(error);
   }

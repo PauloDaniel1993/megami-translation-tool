@@ -31,7 +31,9 @@ DEEPSEEK_API_KEY=your_key_here
 ## Validation
 
 ```powershell
-python tools/validate_translations.py --file s1.adx --translations translations/approved/s1.approved.jsonl --text-profile apostrophe-patched --strict
+python tools/validate_translations.py --file s1.adx --translations translations/approved/s1.approved.jsonl --text-profile apostrophe-patched --allow-window-overflow --strict
+python tools/build_patch_jobs_from_translations.py --file s1.adx --translations translations/approved/s1.approved.jsonl --jobs patch_jobs/s1_translated_jobs.apostrophes.json --include-auto-speakers --auto-window-overflow
+python tools/game_management.py reinsert --source-dir work/clean_source --file s1.adx --jobs patch_jobs/s1_translated_jobs.apostrophes.json --out-dir patched_adx_apostrophes --mode variable
 ```
 
 The source game files are required locally to rebuild and install patched ADX/exe outputs, but they are not part of this repository.

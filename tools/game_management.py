@@ -35,6 +35,8 @@ class PatchJob:
     line_number: int
     source: str
     translation: str
+    line_end: int | None = None
+    source_lines: list[str] | None = None
 
 
 @dataclass
@@ -333,10 +335,14 @@ def load_jobs(path: Path) -> list[PatchJob]:
 def validate_unique_lines(jobs: list[PatchJob]) -> None:
     seen: set[tuple[str, int]] = set()
     for job in jobs:
-        key = (job.file, job.line_number)
-        if key in seen:
-            raise SystemExit(f"Duplicate patch target: {job.file}:{job.line_number}")
-        seen.add(key)
+        line_end = job.line_end or job.line_number
+        if line_end < job.line_number:
+            raise SystemExit(f"{job.id}: line_end must be >= line_number")
+        for line_number in range(job.line_number, line_end + 1):
+            key = (job.file, line_number)
+            if key in seen:
+                raise SystemExit(f"Duplicate patch target: {job.file}:{line_number}")
+            seen.add(key)
 
 
 def selected_modes(mode: str) -> list[str]:
@@ -347,43 +353,65 @@ def split_crlf(decoded: bytes) -> list[bytes]:
     return decoded.split(b"\r\n")
 
 
+def job_source_lines(job: PatchJob) -> list[str]:
+    if job.source_lines is not None:
+        return [str(line) for line in job.source_lines]
+    normalized = job.source.replace("\r\n", "\n").replace("\r", "\n")
+    return normalized.split("\n")
+
+
 def patch_decoded_bytes(decoded: bytes, jobs: list[PatchJob], mode: str) -> tuple[bytes, list[tuple[PatchJob, bytes, bytes, int]]]:
     lines = split_crlf(decoded)
-    prepared: list[tuple[PatchJob, int, bytes, bytes, int]] = []
+    prepared: list[tuple[PatchJob, int, int, bytes, bytes, int]] = []
 
     for job in sorted(jobs, key=lambda item: item.line_number):
-        line_index = job.line_number - 1
-        if line_index < 0 or line_index >= len(lines):
+        start_index = job.line_number - 1
+        end_line = job.line_end or job.line_number
+        end_index = end_line - 1
+        if start_index < 0 or end_index >= len(lines):
             raise SystemExit(f"{job.id}: line {job.line_number} does not exist in {job.file}")
 
-        original_line = lines[line_index]
-        source_bytes = job.source.encode("cp932", errors="strict")
+        original_lines = lines[start_index : end_index + 1]
+        source_lines = job_source_lines(job)
+        if len(source_lines) != len(original_lines):
+            raise SystemExit(
+                f"{job.id}: source line count mismatch in {job.file}:{job.line_number}-{end_line}. "
+                f"Expected {len(source_lines)}, found {len(original_lines)}."
+            )
+        source_bytes = [line.encode("cp932", errors="strict") for line in source_lines]
         translation_bytes = job.translation.encode("cp932", errors="strict")
 
-        if original_line != source_bytes:
-            actual = original_line.decode("cp932", errors="replace")
+        if original_lines != source_bytes:
+            actual = "\r\n".join(line.decode("cp932", errors="replace") for line in original_lines)
             raise SystemExit(
-                f"{job.id}: source mismatch in {job.file}:{job.line_number}. "
-                f"Expected {job.source!r}, found {actual!r}. Use clean original .adx files."
+                f"{job.id}: source mismatch in {job.file}:{job.line_number}-{end_line}. "
+                f"Expected {source_lines!r}, found {actual!r}. Use clean original .adx files."
             )
 
         padding = 0
         replacement = translation_bytes
+        original_block = b"\r\n".join(original_lines)
+        is_block_job = job.line_end is not None or job.source_lines is not None
         if mode == "same_size":
-            if len(translation_bytes) > len(original_line):
+            if is_block_job:
+                raise SystemExit(f"{job.id}: range patch jobs require --mode variable")
+            if len(translation_bytes) > len(original_block):
                 raise SystemExit(
                     f"{job.id}: translation is {len(translation_bytes)} byte(s), "
-                    f"but original line is {len(original_line)} byte(s)"
+                    f"but original line is {len(original_block)} byte(s)"
                 )
-            padding = len(original_line) - len(translation_bytes)
+            padding = len(original_block) - len(translation_bytes)
             replacement += b" " * padding
 
-        prepared.append((job, line_index, original_line, replacement, padding))
+        prepared.append((job, start_index, end_index, original_block, replacement, padding))
 
-    for _, line_index, _, replacement, _ in prepared:
-        lines[line_index] = replacement
+    for job, start_index, end_index, _, replacement, _ in sorted(prepared, key=lambda item: item[1], reverse=True):
+        if mode == "same_size":
+            lines[start_index] = replacement
+        else:
+            lines[start_index : end_index + 1] = replacement.split(b"\r\n")
 
-    result_rows = [(job, original, replacement, padding) for job, _, original, replacement, padding in prepared]
+    result_rows = [(job, original, replacement, padding) for job, _, _, original, replacement, padding in prepared]
     return b"\r\n".join(lines), result_rows
 
 

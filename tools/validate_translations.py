@@ -71,15 +71,17 @@ def validate(args: argparse.Namespace) -> int:
             failures.append({"line_id": line_id, "issue": "empty_render_lines"})
         for render_line in render_lines:
             if visible_char_count(render_line) > int(entry.get("max_chars", 50)):
-                failures.append(
-                    {
-                        "line_id": line_id,
-                        "issue": "line_too_long",
-                        "length": visible_char_count(render_line),
-                        "max": entry.get("max_chars", 50),
-                        "en": en,
-                    }
-                )
+                row = {
+                    "line_id": line_id,
+                    "issue": "line_too_long",
+                    "length": visible_char_count(render_line),
+                    "max": entry.get("max_chars", 50),
+                    "en": en,
+                }
+                if args.allow_window_overflow:
+                    warnings.append({**row, "issue": "auto_line_wrap_required"})
+                else:
+                    failures.append(row)
         for final_line in final_lines:
             if not cp932_ok(final_line):
                 failures.append({"line_id": line_id, "issue": "not_cp932_encodable", "en": en})
@@ -95,7 +97,12 @@ def validate(args: argparse.Namespace) -> int:
         if contains_japanese(en) and not args.allow_japanese:
             warnings.append({"line_id": line_id, "issue": "japanese_remaining", "en": en})
 
-    failures.extend(validate_page_line_counts(index, translations))
+    page_line_failures = validate_page_line_counts(index, translations)
+    if args.allow_window_overflow:
+        for row in page_line_failures:
+            warnings.append({**row, "issue": "auto_window_overflow_required"})
+    else:
+        failures.extend(page_line_failures)
 
     duplicate_check: dict[str, int] = {}
     for record in records:
@@ -210,6 +217,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--report-out", type=Path, default=Path("qa/reports"))
     parser.add_argument("--text-profile", choices=TEXT_PROFILES, default="vanilla")
     parser.add_argument("--allow-japanese", action="store_true")
+    parser.add_argument(
+        "--allow-window-overflow",
+        action="store_true",
+        help="report page line overflow as a warning for overflow-aware patch job builds",
+    )
     parser.add_argument("--strict", action="store_true")
     return parser
 

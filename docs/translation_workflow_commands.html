@@ -108,12 +108,12 @@ qa/reports/s1_validation.html</code></pre>
   </p>
 
   <h2>10. Build Patch Jobs</h2>
-  <p>Creates patch jobs for approved lines and optional glossary-controlled speaker names.</p>
-  <pre><code>python tools/build_patch_jobs_from_translations.py --file s1.adx --translations translations/approved/s1.approved.jsonl --jobs patch_jobs/s1_translated_jobs.json --include-auto-speakers</code></pre>
+  <p>Creates patch jobs for approved lines, optional glossary-controlled speaker names, and automatic overflow windows.</p>
+  <pre><code>python tools/build_patch_jobs_from_translations.py --file s1.adx --translations translations/approved/s1.approved.jsonl --jobs patch_jobs/s1_translated_jobs.apostrophes.json --include-auto-speakers --auto-window-overflow</code></pre>
 
   <h2>11. Reinsert</h2>
-  <p>Uses the existing game management script to patch clean original ADX files.</p>
-  <pre><code>python tools/game_management.py reinsert --file s1.adx --jobs patch_jobs/s1_translated_jobs.json --out-dir patched_adx</code></pre>
+  <p>Uses the existing game management script to patch clean original ADX files. Overflow window jobs require variable-size mode.</p>
+  <pre><code>python tools/game_management.py reinsert --source-dir work/clean_source --file s1.adx --jobs patch_jobs/s1_translated_jobs.apostrophes.json --out-dir patched_adx_apostrophes --mode variable</code></pre>
 
   <h2>Notes</h2>
   <ul>

@@ -19,23 +19,229 @@ def corpus_index(pages: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     return index
 
 
-def render_translation(entry: dict[str, Any], en: str) -> str:
-    normalized = en.replace("\r\n", "\n").replace("\r", "\n")
-    lines = [line.strip() for line in normalized.split("\n") if line.strip()]
+def split_translation_lines(text: str) -> list[str]:
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    return [line.strip() for line in normalized.split("\n") if line.strip()]
+
+
+def wrap_visible_line(line: str, max_chars: int) -> list[str]:
+    stripped = line.strip()
+    if len(stripped) <= max_chars:
+        return [stripped]
+
+    words = [word for word in stripped.split(" ") if word]
+    if len(words) <= 1:
+        return [stripped[index : index + max_chars] for index in range(0, len(stripped), max_chars)]
+
+    wrapped: list[str] = []
+    current = ""
+    for word in words:
+        while len(word) > max_chars:
+            if current:
+                wrapped.append(current)
+                current = ""
+            wrapped.append(word[:max_chars])
+            word = word[max_chars:]
+
+        if not word:
+            continue
+        if not current:
+            current = word
+        elif len(current) + 1 + len(word) <= max_chars:
+            current = f"{current} {word}"
+        else:
+            wrapped.append(current)
+            current = word
+
+    if current:
+        wrapped.append(current)
+    return wrapped
+
+
+def wrap_translation_lines(lines: list[str], max_chars: int) -> list[str]:
+    wrapped: list[str] = []
+    for line in lines:
+        wrapped.extend(wrap_visible_line(line, max_chars))
+    return wrapped
+
+
+def render_lines_from_visible(entry: dict[str, Any], lines: list[str]) -> list[str]:
     prefix = str(entry.get("render_prefix", ""))
-    return "\r\n".join(prefix + line for line in lines)
+    return [prefix + line for line in lines]
 
 
-def build_jobs(args: argparse.Namespace) -> None:
-    stem = Path(args.file).stem
-    log(f"Loading corpus pages for {args.file}")
-    pages = read_jsonl(args.corpus_dir / f"{stem}.pages.jsonl")
-    index = corpus_index(pages)
-    log(f"Loaded {len(pages)} page(s), {len(index)} line target(s)")
-    log(f"Loading translations from {args.translations}")
-    translations = flatten_translation_records(read_jsonl(args.translations))
-    log(f"Loaded {len(translations)} flattened translation(s)")
+def render_translation_lines(entry: dict[str, Any], en: str, *, wrap: bool = False) -> list[str]:
+    lines = split_translation_lines(en)
+    if wrap:
+        lines = wrap_translation_lines(lines, int(entry.get("max_chars", 50)))
+    return render_lines_from_visible(entry, lines)
 
+
+def render_translation(entry: dict[str, Any], en: str, *, wrap: bool = False) -> str:
+    return "\r\n".join(render_translation_lines(entry, en, wrap=wrap))
+
+
+def translation_is_allowed(item: dict[str, Any], args: argparse.Namespace) -> bool:
+    status = str(item.get("status", "") or item.get("review_status", ""))
+    return not args.require_approved or status in {"approved", ""}
+
+
+def source_lines_for_page(page: dict[str, Any]) -> list[str]:
+    return [str(entry["source_line"]) for entry in page["entries"]]
+
+
+def entries_are_contiguous(page: dict[str, Any]) -> bool:
+    line_numbers = [int(entry["line_number"]) for entry in page["entries"]]
+    return line_numbers == list(range(min(line_numbers), max(line_numbers) + 1))
+
+
+def chunk_lines(lines: list[str], size: int) -> list[list[str]]:
+    if size <= 0:
+        raise SystemExit("Cannot create overflow windows with zero available text lines")
+    return [lines[index : index + size] for index in range(0, len(lines), size)]
+
+
+def narration_windows(rendered_items: list[dict[str, Any]], max_lines: int) -> list[list[str]]:
+    windows: list[list[str]] = []
+    current: list[str] = []
+
+    def flush_current() -> None:
+        nonlocal current
+        if current:
+            windows.append(current)
+            current = []
+
+    for item in rendered_items:
+        lines = item["lines"]
+        chunks = chunk_lines(lines, max_lines)
+        if len(chunks) == 1:
+            if current and len(current) + len(lines) > max_lines:
+                flush_current()
+            current.extend(lines)
+            continue
+
+        flush_current()
+        windows.extend(chunks)
+
+    flush_current()
+    return windows
+
+
+def dialogue_windows(
+    rendered_items: list[dict[str, Any]],
+    speaker_lines: list[str],
+    body_capacity: int,
+) -> list[list[str]]:
+    windows: list[list[str]] = []
+    current_body: list[str] = []
+
+    def flush_current() -> None:
+        nonlocal current_body
+        if current_body:
+            windows.append(speaker_lines + current_body)
+            current_body = []
+
+    for item in rendered_items:
+        entry = item["entry"]
+        if entry.get("role") == "speaker":
+            continue
+
+        lines = item["lines"]
+        chunks = chunk_lines(lines, body_capacity)
+        if len(chunks) == 1:
+            if current_body and len(current_body) + len(lines) > body_capacity:
+                flush_current()
+            current_body.extend(lines)
+            continue
+
+        flush_current()
+        windows.extend(speaker_lines + chunk for chunk in chunks)
+
+    flush_current()
+    return windows or [speaker_lines]
+
+
+def flatten_windows(windows: list[list[str]]) -> list[str]:
+    output: list[str] = []
+    for index, window in enumerate(windows):
+        if index:
+            output.append("@h")
+        output.extend(window)
+    return output
+
+
+def windowed_page_lines(page: dict[str, Any], rendered_items: list[dict[str, Any]]) -> list[str]:
+    textbox = page.get("textbox", {})
+    max_lines = int(textbox.get("max_lines_total", 4))
+    if max_lines <= 0:
+        raise SystemExit(f"{page['page_id']}: max_lines_total must be positive")
+
+    if not page.get("speaker_present"):
+        return flatten_windows(narration_windows(rendered_items, max_lines))
+
+    speaker_lines: list[str] = []
+    speaker_consumed = False
+    for item in rendered_items:
+        entry = item["entry"]
+        if not speaker_consumed and entry.get("role") == "speaker":
+            speaker_lines.extend(item["lines"])
+            speaker_consumed = True
+
+    if not speaker_lines:
+        return flatten_windows(narration_windows(rendered_items, max_lines))
+
+    body_capacity = max_lines - len(speaker_lines)
+    if body_capacity <= 0:
+        raise SystemExit(f"{page['page_id']}: speaker line consumes the full textbox")
+
+    return flatten_windows(dialogue_windows(rendered_items, speaker_lines, body_capacity))
+
+
+def page_render_items(
+    page: dict[str, Any],
+    translations: dict[str, dict[str, Any]],
+    args: argparse.Namespace,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    rendered_items: list[dict[str, Any]] = []
+    wrapped_lines: list[dict[str, Any]] = []
+
+    for entry in page["entries"]:
+        source_line = str(entry["source_line"])
+        lines = [source_line]
+        should_patch = False
+
+        if entry.get("auto"):
+            if args.include_auto_speakers and entry.get("en"):
+                lines = render_translation_lines(entry, str(entry["en"]), wrap=False)
+                should_patch = lines != [source_line]
+        else:
+            item = translations.get(entry["line_id"])
+            if item and translation_is_allowed(item, args):
+                en = str(item.get("en", "")).strip()
+                if en:
+                    visible_lines = split_translation_lines(en)
+                    wrapped_visible_lines = wrap_translation_lines(visible_lines, int(entry.get("max_chars", 50)))
+                    if wrapped_visible_lines != visible_lines:
+                        wrapped_lines.append(
+                            {
+                                "line_id": entry["line_id"],
+                                "original_lines": visible_lines,
+                                "wrapped_lines": wrapped_visible_lines,
+                            }
+                        )
+                    lines = render_lines_from_visible(entry, wrapped_visible_lines)
+                    should_patch = True
+
+        rendered_items.append({"entry": entry, "lines": lines, "patch": should_patch})
+
+    return rendered_items, wrapped_lines
+
+
+def build_normal_jobs(
+    index: dict[str, dict[str, Any]],
+    translations: dict[str, dict[str, Any]],
+    args: argparse.Namespace,
+) -> list[dict[str, Any]]:
     jobs: list[dict[str, Any]] = []
     seen: set[str] = set()
 
@@ -64,10 +270,7 @@ def build_jobs(args: argparse.Namespace) -> None:
             raise SystemExit(f"Unknown line_id in translation file: {line_id}")
         entry = index[line_id]
         en = str(item.get("en", "")).strip()
-        if not en:
-            continue
-        status = str(item.get("status", "") or item.get("review_status", ""))
-        if args.require_approved and status not in {"approved", ""}:
+        if not en or not translation_is_allowed(item, args):
             continue
         jobs.append(
             {
@@ -78,6 +281,109 @@ def build_jobs(args: argparse.Namespace) -> None:
                 "translation": render_translation(entry, en),
             }
         )
+
+    return jobs
+
+
+def build_windowed_jobs(
+    pages: list[dict[str, Any]],
+    translations: dict[str, dict[str, Any]],
+    args: argparse.Namespace,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    jobs: list[dict[str, Any]] = []
+    report: dict[str, Any] = {
+        "file": args.file,
+        "auto_window_overflow": True,
+        "overflow_pages": [],
+        "wrapped_lines": [],
+    }
+
+    known_line_ids = {entry["line_id"] for page in pages for entry in page["entries"]}
+    for line_id in translations:
+        if line_id not in known_line_ids:
+            raise SystemExit(f"Unknown line_id in translation file: {line_id}")
+
+    for page in pages:
+        rendered_items, wrapped_lines = page_render_items(page, translations, args)
+        report["wrapped_lines"].extend(wrapped_lines)
+        if not any(item["patch"] for item in rendered_items):
+            continue
+
+        max_lines = int(page.get("textbox", {}).get("max_lines_total", 4))
+        used_lines = sum(len(item["lines"]) for item in rendered_items)
+        if used_lines <= max_lines:
+            for item in rendered_items:
+                if not item["patch"]:
+                    continue
+                entry = item["entry"]
+                jobs.append(
+                    {
+                        "id": entry["line_id"],
+                        "file": entry["file"],
+                        "line_number": entry["line_number"],
+                        "source": entry["source_line"],
+                        "translation": "\r\n".join(item["lines"]),
+                    }
+                )
+            continue
+
+        if page.get("terminator") != "@h":
+            raise SystemExit(
+                f"{page['page_id']}: cannot auto-create overflow windows because terminator is {page.get('terminator')!r}"
+            )
+        if not entries_are_contiguous(page):
+            raise SystemExit(f"{page['page_id']}: cannot range-patch non-contiguous text entries")
+
+        replacement_lines = windowed_page_lines(page, rendered_items)
+        source_lines = source_lines_for_page(page)
+        jobs.append(
+            {
+                "id": f"{page['page_id']}:overflow-windows",
+                "file": page["file"],
+                "line_number": int(page["entries"][0]["line_number"]),
+                "line_end": int(page["entries"][-1]["line_number"]),
+                "source": "\r\n".join(source_lines),
+                "source_lines": source_lines,
+                "translation": "\r\n".join(replacement_lines),
+            }
+        )
+        report["overflow_pages"].append(
+            {
+                "page_id": page["page_id"],
+                "file": page["file"],
+                "line_start": int(page["entries"][0]["line_number"]),
+                "line_end": int(page["entries"][-1]["line_number"]),
+                "used_lines": used_lines,
+                "max_lines": max_lines,
+                "inserted_windows": replacement_lines.count("@h"),
+                "replacement_lines": replacement_lines,
+            }
+        )
+
+    return jobs, report
+
+
+def build_jobs(args: argparse.Namespace) -> None:
+    stem = Path(args.file).stem
+    log(f"Loading corpus pages for {args.file}")
+    pages = read_jsonl(args.corpus_dir / f"{stem}.pages.jsonl")
+    index = corpus_index(pages)
+    log(f"Loaded {len(pages)} page(s), {len(index)} line target(s)")
+    log(f"Loading translations from {args.translations}")
+    translations = flatten_translation_records(read_jsonl(args.translations))
+    log(f"Loaded {len(translations)} flattened translation(s)")
+
+    if args.auto_window_overflow:
+        log("Building overflow-aware patch jobs")
+        jobs, report = build_windowed_jobs(pages, translations, args)
+        report_path = args.overflow_report or args.jobs.with_name(f"{args.jobs.stem}.overflow_report.json")
+        write_json(report_path, report)
+        log(
+            f"Prepared {len(report['overflow_pages'])} overflow page(s) "
+            f"and wrapped {len(report['wrapped_lines'])} line(s); report {report_path}"
+        )
+    else:
+        jobs = build_normal_jobs(index, translations, args)
 
     write_json(args.jobs, jobs)
     log(f"Wrote {len(jobs)} patch job(s) to {args.jobs}")
@@ -91,6 +397,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--jobs", type=Path, default=Path("patch_jobs/translated_jobs.json"))
     parser.add_argument("--include-auto-speakers", action="store_true")
     parser.add_argument("--require-approved", action="store_true")
+    parser.add_argument(
+        "--auto-window-overflow",
+        action="store_true",
+        help="wrap overlong English lines and insert extra @h windows when a textbox exceeds its line limit",
+    )
+    parser.add_argument("--overflow-report", type=Path, help="optional JSON report for generated overflow windows")
     return parser
 
 
