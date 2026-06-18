@@ -465,30 +465,35 @@ textarea {
   grid-template-columns: 1fr;
   gap: 10px;
   position: relative;
-  padding-left: 18px;
+  padding-left: 12px;
 }
 
 .workflow-actions::before {
   content: "";
   position: absolute;
-  left: 28px;
-  top: 25px;
-  bottom: 25px;
+  left: 37px;
+  top: 30px;
+  bottom: 30px;
   width: 2px;
   background: #b7cdc9;
+  pointer-events: none;
 }
 
 .pipeline-step {
   min-height: 42px;
-  justify-content: flex-start;
-  padding-left: 34px;
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 8px;
+  align-items: center;
+  justify-content: normal;
+  justify-items: start;
+  padding: 0 12px;
   position: relative;
   background: #ffffff;
 }
 
 .pipeline-step > svg {
-  position: absolute;
-  left: -1px;
+  position: relative;
   z-index: 1;
   width: 24px;
   height: 24px;
@@ -496,6 +501,7 @@ textarea {
   border: 1px solid #9bb8b3;
   border-radius: 999px;
   background: #ffffff;
+  justify-self: center;
 }
 
 .pipeline-step:hover:not(:disabled) > svg {
