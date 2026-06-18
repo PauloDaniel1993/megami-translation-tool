@@ -79,6 +79,7 @@ function App() {
   const [busy, setBusy] = useState("");
   const [workflowLog, setWorkflowLog] = useState([]);
   const [backups, setBackups] = useState([]);
+  const [promptOpen, setPromptOpen] = useState(false);
 
   async function loadFiles() {
     const [healthPayload, filesPayload, backupsPayload] = await Promise.all([
@@ -116,6 +117,10 @@ function App() {
   useEffect(() => {
     if (stem) loadStem(stem, textProfile).catch((error) => setWorkflowLog((log) => [`Load failed: ${error.message}`, ...log]));
   }, [stem, textProfile]);
+
+  useEffect(() => {
+    setPromptOpen(false);
+  }, [selectedId, stem]);
 
   const rows = payload?.rows || [];
   const rowsWithDrafts = useMemo(
@@ -159,6 +164,12 @@ function App() {
   const sceneSummary = selected
     ? (payload?.sceneSummaries || []).find((scene) => scene.scene_id === selected.scene_id)
     : null;
+  const promptByBatch = useMemo(() => {
+    const prompts = new Map();
+    for (const prompt of payload?.translationPrompts || []) prompts.set(prompt.batch_id, prompt);
+    return prompts;
+  }, [payload]);
+  const selectedPrompt = selected?.batch_id ? promptByBatch.get(selected.batch_id) : null;
   const previousTranslations = selectedIndex > -1
     ? rowsWithDrafts
         .slice(0, selectedIndex)
@@ -505,6 +516,30 @@ function App() {
             <div><strong>Approved</strong> {payload?.approvedExists ? "yes" : "missing"}</div>
             <div><strong>Clean source</strong> {payload?.cleanSourceExists ? "yes" : "missing"}</div>
             <div><strong>Latest backup</strong> {latestBackup?.id || "none"}</div>
+          </div>
+
+          <div className={`prompt-panel ${promptOpen ? "open" : ""}`}>
+            <button
+              type="button"
+              className="prompt-summary"
+              onClick={() => setPromptOpen((value) => !value)}
+              aria-expanded={promptOpen}
+            >
+              <span>DeepSeek prompt</span>
+              <small>{selectedPrompt ? selectedPrompt.batch_id : "not captured"}</small>
+            </button>
+            {promptOpen && selectedPrompt ? (
+              <div className="prompt-body">
+                <div className="prompt-meta">
+                  <span>{selected?.line_id}</span>
+                  {selectedPrompt.model && <span>{selectedPrompt.model}</span>}
+                  {selectedPrompt.status && <span>{selectedPrompt.status}</span>}
+                </div>
+                <pre>{selectedPrompt.prompt}</pre>
+              </div>
+            ) : promptOpen ? (
+              <div className="prompt-empty">No captured DeepSeek prompt for this line.</div>
+            ) : null}
           </div>
 
           <div className="log">

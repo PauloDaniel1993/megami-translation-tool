@@ -235,6 +235,21 @@ async function loadTranslationRecords(stem) {
   return { approvedPath, records, translations };
 }
 
+async function loadTranslationPrompts(stem) {
+  stem = safeStem(stem);
+  const promptPath = projectPath("qa", "reports", `${stem}_translation_prompts.jsonl`);
+  const records = await readJsonl(promptPath);
+  return records
+    .filter((record) => record.batch_id && record.prompt)
+    .map((record) => ({
+      batch_id: String(record.batch_id),
+      prompt: String(record.prompt),
+      status: record.status || null,
+      created_at: record.created_at || null,
+      model: record.model || null,
+    }));
+}
+
 function buildRows(corpus, translations) {
   const rows = [];
   for (const page of corpus.pages) {
@@ -487,6 +502,7 @@ app.get("/api/files/:stem", async (req, res, next) => {
     const textProfile = textProfiles.includes(req.query.textProfile) ? req.query.textProfile : "apostrophe-patched";
     const corpus = await loadCorpus(stem);
     const { approvedPath, records, translations } = await loadTranslationRecords(stem);
+    const translationPrompts = await loadTranslationPrompts(stem);
     const rows = buildRows(corpus, translations).map((row) => ({
       ...row,
       issues: lineIssues(row, textProfile),
@@ -500,6 +516,7 @@ app.get("/api/files/:stem", async (req, res, next) => {
       cleanSourceExists: await exists(projectPath("work", "clean_source", `${stem}.adx`)),
       scenes: corpus.scenes,
       sceneSummaries: Array.isArray(corpus.sceneSummaries) ? corpus.sceneSummaries : [],
+      translationPrompts,
       batches: corpus.batches.map((batch) => ({
         batch_id: batch.batch_id,
         batch_index: batch.batch_index,

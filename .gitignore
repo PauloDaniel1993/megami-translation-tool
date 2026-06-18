@@ -23,7 +23,10 @@ work/decoded_adx/
 
 # Generated reports and patch jobs
 patch_jobs/
-qa/
+qa/*
+!qa/reports/
+qa/reports/*
+!qa/reports/*_translation_prompts.jsonl
 
 # Python
 __pycache__/
