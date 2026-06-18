@@ -297,7 +297,12 @@ function App() {
               <Search size={15} />
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search" />
             </div>
-            <button type="button" onClick={() => loadStem(stem, textProfile)} title="Reload">
+            <button
+              type="button"
+              onClick={() => loadStem(stem, textProfile)}
+              title="Reload the selected file and discard unsaved local edits"
+              aria-label="Reload selected file"
+            >
               <RefreshCw size={16} />
             </button>
           </div>
@@ -334,6 +339,7 @@ function App() {
                 key={row.line_id}
                 type="button"
                 className={`line-row ${selected?.line_id === row.line_id ? "active" : ""} ${row.isDirty ? "dirty" : ""}`}
+                title={`Open ${row.line_id} by ${speakerName(row)}`}
                 onClick={() => {
                   setSelectedId(row.line_id);
                   setSuggestion(null);
@@ -357,11 +363,21 @@ function App() {
                   <h1>{selected.line_id}</h1>
                 </div>
                 <div className="head-actions">
-                  <button type="button" onClick={() => saveChanges([selected.line_id])} disabled={!dirty.has(selected.line_id) || busy === "save"}>
+                  <button
+                    type="button"
+                    onClick={() => saveChanges([selected.line_id])}
+                    disabled={!dirty.has(selected.line_id) || busy === "save"}
+                    title={`Save edits for ${selected.line_id}`}
+                  >
                     <Save size={16} />
                     Save
                   </button>
-                  <button type="button" onClick={() => saveChanges()} disabled={!dirty.size || busy === "save"}>
+                  <button
+                    type="button"
+                    onClick={() => saveChanges()}
+                    disabled={!dirty.size || busy === "save"}
+                    title="Save every dirty translation line"
+                  >
                     <Save size={16} />
                     Save all
                   </button>
@@ -409,6 +425,7 @@ function App() {
                     key={row.line_id}
                     type="button"
                     className="context-line"
+                    title={`Jump to previous translated line ${row.line_id}`}
                     onClick={() => {
                       setSelectedId(row.line_id);
                       setSuggestion(null);
@@ -454,7 +471,12 @@ function App() {
                     onChange={(event) => setInstruction(event.target.value)}
                     placeholder="Retranslation instruction"
                   />
-                  <button type="button" onClick={askDeepSeek} disabled={!selected.editable || busy === "deepseek"}>
+                  <button
+                    type="button"
+                    onClick={askDeepSeek}
+                    disabled={!selected.editable || busy === "deepseek"}
+                    title={`Ask DeepSeek to retranslate ${selected.line_id}`}
+                  >
                     <Bot size={16} />
                     Ask
                   </button>
@@ -463,7 +485,11 @@ function App() {
                   <div className="suggestion">
                     <div className="suggestion-text">{suggestion.en}</div>
                     {suggestion.notes && <div className="suggestion-notes">{suggestion.notes}</div>}
-                    <button type="button" onClick={() => updateDraft(selected.line_id, { en: suggestion.en || "" })}>
+                    <button
+                      type="button"
+                      onClick={() => updateDraft(selected.line_id, { en: suggestion.en || "" })}
+                      title={`Apply the DeepSeek suggestion to ${selected.line_id}`}
+                    >
                       <Download size={16} />
                       Apply
                     </button>
@@ -478,35 +504,76 @@ function App() {
 
         <aside className="workflow">
           <div className="workflow-actions">
-            <button className="pipeline-step" type="button" onClick={() => runWorkflow("validate", "/api/workflows/validate", { stem, textProfile })}>
+            <button
+              className="pipeline-step"
+              type="button"
+              onClick={() => runWorkflow("validate", "/api/workflows/validate", { stem, textProfile })}
+              title="Validate approved translations against length, encoding, and text-profile rules"
+            >
               <CheckCircle2 size={16} />
               Validate
             </button>
-            <button className="pipeline-step" type="button" onClick={() => runWorkflow("build jobs", "/api/workflows/build-jobs", { stem, textProfile })}>
+            <button
+              className="pipeline-step"
+              type="button"
+              onClick={() => runWorkflow("build jobs", "/api/workflows/build-jobs", { stem, textProfile })}
+              title="Build patch jobs from the approved translation JSONL"
+            >
               <Wrench size={16} />
               Jobs
             </button>
-            <button className="pipeline-step" type="button" onClick={() => runWorkflow("reinsert", "/api/workflows/reinsert", { stem, textProfile, mode: "variable" })}>
+            <button
+              className="pipeline-step"
+              type="button"
+              onClick={() => runWorkflow("reinsert", "/api/workflows/reinsert", { stem, textProfile, mode: "variable" })}
+              title="Reinsert patch jobs into a clean ADX source using variable-size mode"
+            >
               <Wrench size={16} />
               Reinsert
             </button>
-            <button className="pipeline-step" type="button" onClick={() => runWorkflow("verify exe", "/api/workflows/exe/verify")}>
+            <button
+              className="pipeline-step"
+              type="button"
+              onClick={() => runWorkflow("verify exe", "/api/workflows/exe/verify")}
+              title="Verify the executable apostrophe patch against the original backup"
+            >
               <ShieldCheck size={16} />
               Verify exe
             </button>
-            <button className="pipeline-step" type="button" onClick={() => runWorkflow("build exe", "/api/workflows/exe/build")}>
+            <button
+              className="pipeline-step"
+              type="button"
+              onClick={() => runWorkflow("build exe", "/api/workflows/exe/build")}
+              title="Create patched_exe/main_apostrophe.exe from the original executable backup"
+            >
               <Wrench size={16} />
               Build exe
             </button>
-            <button className="pipeline-step" type="button" onClick={installBuild}>
+            <button
+              className="pipeline-step"
+              type="button"
+              onClick={installBuild}
+              title="Back up the live game files and install the patched executable and ADX"
+            >
               <Download size={16} />
               Install
             </button>
-            <button className="pipeline-step" type="button" onClick={() => runWorkflow("launch", "/api/launch")}>
+            <button
+              className="pipeline-step"
+              type="button"
+              onClick={() => runWorkflow("launch", "/api/launch")}
+              title="Launch main.exe from the project root"
+            >
               <Play size={16} />
               Launch
             </button>
-            <button className="pipeline-step" type="button" onClick={() => restoreBackup(latestBackup?.id)} disabled={!latestBackup}>
+            <button
+              className="pipeline-step"
+              type="button"
+              onClick={() => restoreBackup(latestBackup?.id)}
+              disabled={!latestBackup}
+              title={latestBackup ? `Restore latest backup ${latestBackup.id}` : "No app-created backup is available to restore"}
+            >
               <RotateCcw size={16} />
               Restore
             </button>
@@ -524,6 +591,7 @@ function App() {
               className="prompt-summary"
               onClick={() => setPromptOpen((value) => !value)}
               aria-expanded={promptOpen}
+              title={promptOpen ? "Hide the captured DeepSeek prompt for this batch" : "Show the captured DeepSeek prompt for this batch"}
             >
               <span>DeepSeek prompt</span>
               <small>{selectedPrompt ? selectedPrompt.batch_id : "not captured"}</small>
