@@ -69,6 +69,14 @@ function rowIssues(row, draft, textProfile) {
   return [...issues];
 }
 
+function blockIssues(block, draft, textProfile) {
+  const issues = new Set();
+  const text = draft?.en ?? block.en ?? "";
+  if (!String(text).trim()) issues.add("empty");
+  if (textProfile === "vanilla" && String(text).includes("'")) issues.add("apostrophe");
+  return [...issues];
+}
+
 function splitTextLines(text) {
   return String(text || "")
     .replace(/\r\n/g, "\n")
@@ -176,9 +184,34 @@ function estimatePageWindows(selected, rows) {
   };
 }
 
+function estimateBlockPreview(block) {
+  if (!block) return null;
+  const text = block.draft?.en ?? block.en ?? "";
+  const maxChars = Number(block.textbox?.max_chars_per_line || 50);
+  const maxLines = Number(block.textbox?.max_lines_total || 4);
+  const bodyLines = splitTextLines(text).flatMap((line) => wrapVisibleLine(line, maxChars));
+  if (!bodyLines.length) {
+    return { windows: [], window_count: 0, body_line_count: 0, inserted_windows: 0 };
+  }
+  const speaker = block.speaker_en || block.speaker_jp || "";
+  const speakerLines = block.page_role === "dialogue" && speaker ? [speaker] : [];
+  const capacity = Math.max(1, maxLines - speakerLines.length);
+  const windows = [];
+  for (let index = 0; index < bodyLines.length; index += capacity) {
+    const chunk = bodyLines.slice(index, index + capacity);
+    windows.push([...speakerLines, ...chunk]);
+  }
+  return {
+    windows,
+    window_count: windows.length,
+    body_line_count: bodyLines.length,
+    inserted_windows: Math.max(0, windows.length - 1),
+  };
+}
+
 function speakerName(row) {
   if (!row) return "";
-  return row.speaker_en || row.speaker_jp || (row.role === "narration" ? "Narration" : "No speaker");
+  return row.speaker_en || row.speaker_jp || (row.role === "narration" || row.page_role === "narration" ? "Narration" : "No speaker");
 }
 
 function issueLabel(issue) {
@@ -275,8 +308,12 @@ function App() {
   const [textProfile, setTextProfile] = useState("apostrophe-patched");
   const [payload, setPayload] = useState(null);
   const [drafts, setDrafts] = useState({});
+  const [blockDrafts, setBlockDrafts] = useState({});
   const [dirty, setDirty] = useState(new Set());
+  const [blockDirty, setBlockDirty] = useState(new Set());
+  const [viewMode, setViewMode] = useState("blocks");
   const [selectedId, setSelectedId] = useState("");
+  const [selectedBlockId, setSelectedBlockId] = useState("");
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [issueFilter, setIssueFilter] = useState("all");
@@ -307,10 +344,15 @@ function App() {
       const data = await api(`/api/files/${nextStem}?textProfile=${encodeURIComponent(nextProfile)}`);
       const nextDrafts = {};
       for (const row of data.rows) nextDrafts[row.line_id] = { en: row.en || "", notes: row.notes || "" };
+      const nextBlockDrafts = {};
+      for (const block of data.blocks || []) nextBlockDrafts[block.block_id] = { en: block.en || "", notes: block.notes || "" };
       setPayload(data);
       setDrafts(nextDrafts);
+      setBlockDrafts(nextBlockDrafts);
       setDirty(new Set());
+      setBlockDirty(new Set());
       setSelectedId(data.rows.find((row) => row.editable)?.line_id || data.rows[0]?.line_id || "");
+      setSelectedBlockId(data.blocks?.find((block) => String(block.en || "").trim())?.block_id || data.blocks?.[0]?.block_id || "");
       setSuggestion(null);
     } finally {
       setBusy("");
@@ -327,9 +369,10 @@ function App() {
 
   useEffect(() => {
     setPromptOpen(false);
-  }, [selectedId, stem]);
+  }, [selectedId, selectedBlockId, viewMode, stem]);
 
   const rows = payload?.rows || [];
+  const blocks = payload?.blocks || [];
   const rowsWithDrafts = useMemo(
     () =>
       rows.map((row) => ({
@@ -339,6 +382,16 @@ function App() {
         isDirty: dirty.has(row.line_id),
       })),
     [rows, drafts, dirty, textProfile],
+  );
+  const blocksWithDrafts = useMemo(
+    () =>
+      blocks.map((block) => ({
+        ...block,
+        draft: blockDrafts[block.block_id] || { en: block.en || "", notes: block.notes || "" },
+        currentIssues: blockIssues(block, blockDrafts[block.block_id], textProfile),
+        isDirty: blockDirty.has(block.block_id),
+      })),
+    [blocks, blockDrafts, blockDirty, textProfile],
   );
 
   const scenes = useMemo(() => {
@@ -366,21 +419,48 @@ function App() {
     });
   }, [rowsWithDrafts, query, roleFilter, issueFilter, sceneFilter]);
 
+  const filteredBlocks = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return blocksWithDrafts.filter((block) => {
+      if (roleFilter !== "all" && block.page_role !== roleFilter) return false;
+      if (sceneFilter !== "all" && block.scene_id !== sceneFilter) return false;
+      if (issueFilter === "dirty" && !block.isDirty) return false;
+      if (issueFilter === "untranslated" && block.draft.en.trim()) return false;
+      if (issueFilter !== "all" && issueFilter !== "dirty" && issueFilter !== "untranslated" && !block.currentIssues.includes(issueFilter)) {
+        return false;
+      }
+      if (!q) return true;
+      return [block.block_id, block.jp, block.draft.en, block.speaker_en, block.scene_title_jp]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(q));
+    });
+  }, [blocksWithDrafts, query, roleFilter, issueFilter, sceneFilter]);
+
   const selected = rowsWithDrafts.find((row) => row.line_id === selectedId) || filteredRows[0] || rowsWithDrafts[0];
+  const selectedBlock = blocksWithDrafts.find((block) => block.block_id === selectedBlockId) || filteredBlocks[0] || blocksWithDrafts[0];
   const selectedIndex = selected ? rowsWithDrafts.findIndex((row) => row.line_id === selected.line_id) : -1;
-  const sceneSummary = selected ? (payload?.sceneSummaries || []).find((scene) => scene.scene_id === selected.scene_id) : null;
+  const selectedSceneId = viewMode === "blocks" ? selectedBlock?.scene_id : selected?.scene_id;
+  const sceneSummary = selectedSceneId ? (payload?.sceneSummaries || []).find((scene) => scene.scene_id === selectedSceneId) : null;
   const promptByBatch = useMemo(() => {
     const prompts = new Map();
     for (const prompt of payload?.translationPrompts || []) prompts.set(prompt.batch_id, prompt);
     return prompts;
   }, [payload]);
-  const selectedPrompt = selected?.batch_id ? promptByBatch.get(selected.batch_id) : null;
+  const selectedPrompt = viewMode === "lines" && selected?.batch_id ? promptByBatch.get(selected.batch_id) : null;
   const previousTranslations =
     selectedIndex > -1
       ? rowsWithDrafts
           .slice(0, selectedIndex)
           .filter((row) => row.scene_id === selected.scene_id && row.editable && row.draft.en.trim())
           .slice(-6)
+      : [];
+  const selectedBlockIndex = selectedBlock ? blocksWithDrafts.findIndex((block) => block.block_id === selectedBlock.block_id) : -1;
+  const previousBlocks =
+    selectedBlockIndex > -1
+      ? blocksWithDrafts
+          .slice(0, selectedBlockIndex)
+          .filter((block) => block.scene_id === selectedBlock.scene_id && block.draft.en.trim())
+          .slice(-4)
       : [];
 
   function updateDraft(lineId, patch) {
@@ -389,6 +469,14 @@ function App() {
       [lineId]: { ...(current[lineId] || {}), ...patch },
     }));
     setDirty((current) => new Set(current).add(lineId));
+  }
+
+  function updateBlockDraft(blockId, patch) {
+    setBlockDrafts((current) => ({
+      ...current,
+      [blockId]: { ...(current[blockId] || {}), ...patch },
+    }));
+    setBlockDirty((current) => new Set(current).add(blockId));
   }
 
   async function saveChanges(lineIds) {
@@ -403,7 +491,7 @@ function App() {
     try {
       const result = await api(`/api/files/${stem}/save`, {
         method: "POST",
-        body: JSON.stringify({ changes }),
+        body: JSON.stringify({ changes, layoutMode: "line" }),
       });
       setWorkflowLog((log) => [`Saved ${result.saved} line(s), backup ${result.backupId}`, ...log]);
       await loadStem(stem, textProfile);
@@ -413,6 +501,71 @@ function App() {
     } finally {
       setBusy("");
     }
+  }
+
+  async function saveBlockChanges(blockIds) {
+    const ids = blockIds || [...blockDirty];
+    const changes = ids.map((blockId) => ({
+      block_id: blockId,
+      en: blockDrafts[blockId]?.en || "",
+      notes: blockDrafts[blockId]?.notes || "",
+    }));
+    if (!changes.length) return;
+    setBusy("save");
+    try {
+      const result = await api(`/api/files/${stem}/blocks/save`, {
+        method: "POST",
+        body: JSON.stringify({ changes }),
+      });
+      setWorkflowLog((log) => [`Saved ${result.saved} block(s), backup ${result.backupId}`, ...log]);
+      await loadStem(stem, textProfile);
+      await loadFiles();
+    } catch (error) {
+      setWorkflowLog((log) => [`Block save failed: ${error.message}`, ...log]);
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function splitSelectedBlockToLines() {
+    if (!selectedBlock) {
+      setViewMode("lines");
+      return;
+    }
+    if (!String(selectedBlock.draft.en || "").trim()) {
+      setSelectedId(selectedBlock.line_ids?.[0] || selectedId);
+      setViewMode("lines");
+      return;
+    }
+    setBusy("split");
+    try {
+      const result = await api(`/api/files/${stem}/blocks/split-to-lines`, {
+        method: "POST",
+        body: JSON.stringify({
+          blockId: selectedBlock.block_id,
+          en: selectedBlock.draft.en || "",
+        }),
+      });
+      setWorkflowLog((log) => [`Split ${selectedBlock.block_id} into ${result.saved} line override(s), backup ${result.backupId}`, ...log]);
+      await loadStem(stem, textProfile);
+      setViewMode("lines");
+      if (result.firstLineId) setSelectedId(result.firstLineId);
+      await loadFiles();
+    } catch (error) {
+      setWorkflowLog((log) => [`Split failed: ${error.message}`, ...log]);
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function chooseViewMode(nextMode) {
+    if (nextMode === viewMode) return;
+    if (nextMode === "blocks" && roleFilter === "speaker") setRoleFilter("all");
+    if (nextMode === "lines" && viewMode === "blocks") {
+      await splitSelectedBlockToLines();
+      return;
+    }
+    setViewMode(nextMode);
   }
 
   async function runWorkflow(label, path, body = {}) {
@@ -434,21 +587,26 @@ function App() {
   }
 
   async function askDeepSeek() {
-    if (!selected) return;
+    if (viewMode === "blocks" && !selectedBlock) return;
+    if (viewMode === "lines" && !selected) return;
     setBusy("deepseek");
     setSuggestion(null);
     try {
       const result = await api(`/api/files/${stem}/retranslate`, {
         method: "POST",
         body: JSON.stringify({
-          lineId: selected.line_id,
+          lineId: viewMode === "lines" ? selected.line_id : undefined,
+          blockId: viewMode === "blocks" ? selectedBlock.block_id : undefined,
           instruction,
           textProfile,
           model: "deepseek-v4-flash",
         }),
       });
       setSuggestion(result.suggestion);
-      setWorkflowLog((log) => [`DeepSeek suggestion saved for ${selected.line_id}`, ...log]);
+      setWorkflowLog((log) => [
+        `DeepSeek suggestion saved for ${viewMode === "blocks" ? selectedBlock.block_id : selected.line_id}`,
+        ...log,
+      ]);
     } catch (error) {
       setWorkflowLog((log) => [`DeepSeek failed: ${error.message}`, ...log]);
     } finally {
@@ -471,12 +629,19 @@ function App() {
   const latestBackup = backups[0];
   const translated = rowsWithDrafts.filter((row) => row.editable && row.draft.en.trim()).length;
   const editable = rowsWithDrafts.filter((row) => row.editable).length;
-  const failures = rowsWithDrafts.filter((row) => row.currentIssues.length && row.editable).length;
+  const blockTranslated = blocksWithDrafts.filter((block) => block.draft.en.trim()).length;
+  const lineFailures = rowsWithDrafts.filter((row) => row.currentIssues.length && row.editable).length;
+  const blockFailures = blocksWithDrafts.filter((block) => block.currentIssues.length).length;
+  const failures = viewMode === "blocks" ? blockFailures : lineFailures;
   const overflowReport = payload?.overflowReport;
   const autoBreaks = overflowReport?.insertedWindows || 0;
   const selectedWindowStats = estimatePageWindows(selected, rowsWithDrafts);
+  const selectedBlockPreview = estimateBlockPreview(selectedBlock);
   const reportedOverflowPage = selected
     ? overflowReport?.pages?.find((page) => page.page_id === selected.page_id)
+    : null;
+  const selectedBlockReport = selectedBlock
+    ? overflowReport?.blocks?.find((block) => block.block_id === selectedBlock.block_id)
     : null;
 
   return (
@@ -501,8 +666,8 @@ function App() {
         </AppSelect>
 
         <div className="flex min-w-0 flex-wrap justify-end gap-2 max-[980px]:justify-start">
-          <MetricBadge>{translated}/{editable}</MetricBadge>
-          <MetricBadge>{dirty.size} dirty</MetricBadge>
+          <MetricBadge>{viewMode === "blocks" ? `${blockTranslated}/${blocksWithDrafts.length} blocks` : `${translated}/${editable} lines`}</MetricBadge>
+          <MetricBadge>{dirty.size + blockDirty.size} dirty</MetricBadge>
           <MetricBadge variant={failures ? "destructive" : "secondary"}>{failures} flagged</MetricBadge>
           <MetricBadge variant={autoBreaks ? "default" : "outline"}>{autoBreaks} auto @h</MetricBadge>
           <MetricBadge variant={health?.deepseekConfigured ? "default" : "outline"}>
@@ -556,22 +721,64 @@ function App() {
                 <SelectItem value="all">All roles</SelectItem>
                 <SelectItem value="narration">Narration</SelectItem>
                 <SelectItem value="dialogue">Dialogue</SelectItem>
-                <SelectItem value="speaker">Speaker</SelectItem>
+                {viewMode === "lines" && <SelectItem value="speaker">Speaker</SelectItem>}
               </AppSelect>
-                <AppSelect value={issueFilter} onValueChange={setIssueFilter} label="Issue filter">
-                  <SelectItem value="all">All lines</SelectItem>
-                  <SelectItem value="dirty">Dirty</SelectItem>
-                  <SelectItem value="untranslated">Untranslated</SelectItem>
-                  <SelectItem value="empty">Empty</SelectItem>
-                <SelectItem value="line_too_long">Wrap needed</SelectItem>
-                  <SelectItem value="apostrophe">Apostrophe</SelectItem>
-                </AppSelect>
+              <AppSelect value={issueFilter} onValueChange={setIssueFilter} label="Issue filter">
+                <SelectItem value="all">All {viewMode}</SelectItem>
+                <SelectItem value="dirty">Dirty</SelectItem>
+                <SelectItem value="untranslated">Untranslated</SelectItem>
+                <SelectItem value="empty">Empty</SelectItem>
+                {viewMode === "lines" && <SelectItem value="line_too_long">Wrap needed</SelectItem>}
+                <SelectItem value="apostrophe">Apostrophe</SelectItem>
+              </AppSelect>
+              <div className="grid grid-cols-2 gap-2">
+                <TooltipButton
+                  tooltip="Edit complete translation blocks"
+                  variant={viewMode === "blocks" ? "default" : "outline"}
+                  onClick={() => chooseViewMode("blocks")}
+                >
+                  Blocks
+                </TooltipButton>
+                <TooltipButton
+                  tooltip="Split the selected block into explicit line overrides and switch to line editing"
+                  variant={viewMode === "lines" ? "default" : "outline"}
+                  onClick={() => chooseViewMode("lines")}
+                  disabled={busy === "split"}
+                >
+                  Lines
+                </TooltipButton>
+              </div>
             </div>
           </div>
 
           <ScrollArea className="h-[calc(100vh-12rem)] max-[760px]:h-80">
             <div className="divide-y">
-              {filteredRows.map((row) => (
+              {viewMode === "blocks" ? filteredBlocks.map((block) => (
+                <Button
+                  key={block.block_id}
+                  type="button"
+                  variant="ghost"
+                  title={`Open ${block.block_id}`}
+                  className={cn(
+                    "h-auto w-full justify-start rounded-none px-3 py-2 text-left",
+                    selectedBlock?.block_id === block.block_id && "bg-accent text-accent-foreground",
+                    block.isDirty && "border-l-4 border-l-chart-3",
+                  )}
+                  onClick={() => {
+                    setSelectedBlockId(block.block_id);
+                    setSuggestion(null);
+                  }}
+                >
+                  <span className="grid w-full grid-cols-[116px_82px_minmax(0,1fr)_auto] items-center gap-2">
+                    <span className="font-mono text-xs text-muted-foreground">{block.block_id.replace(`${stem}:`, "")}</span>
+                    <span className="truncate text-xs text-muted-foreground">{speakerName(block)}</span>
+                    <span className="truncate font-normal">{block.draft.en || block.jp}</span>
+                    <Badge variant={block.effective_mode === "lines" ? "secondary" : "outline"} className="rounded-md">
+                      {block.effective_mode}
+                    </Badge>
+                  </span>
+                </Button>
+              )) : filteredRows.map((row) => (
                 <Button
                   key={row.line_id}
                   type="button"
@@ -605,7 +812,238 @@ function App() {
 
         <section className="min-h-0 bg-background">
           <ScrollArea className="h-full">
-            {selected ? (
+            {viewMode === "blocks" ? (
+              selectedBlock ? (
+                <div className="flex flex-col gap-4 p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-muted-foreground">{selectedBlock.scene_title_jp}</p>
+                      <h1 className="text-2xl font-semibold tracking-tight">{selectedBlock.block_id}</h1>
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <TooltipButton
+                        tooltip={`Save edits for ${selectedBlock.block_id}`}
+                        variant="outline"
+                        disabled={!blockDirty.has(selectedBlock.block_id) || busy === "save"}
+                        onClick={() => saveBlockChanges([selectedBlock.block_id])}
+                      >
+                        <Icon><Save /></Icon>
+                        Save
+                      </TooltipButton>
+                      <TooltipButton
+                        tooltip="Save every dirty block"
+                        variant="outline"
+                        disabled={!blockDirty.size || busy === "save"}
+                        onClick={() => saveBlockChanges()}
+                      >
+                        <Icon><Save /></Icon>
+                        Save all
+                      </TooltipButton>
+                      <TooltipButton
+                        tooltip="Split this block into explicit line overrides and switch to line editing"
+                        variant="secondary"
+                        disabled={busy === "split"}
+                        onClick={splitSelectedBlockToLines}
+                      >
+                        Lines
+                      </TooltipButton>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary">pages {selectedBlock.page_start}-{selectedBlock.page_end}</Badge>
+                    <Badge variant="secondary">lines {selectedBlock.line_start}-{selectedBlock.line_end}</Badge>
+                    <Badge variant="secondary">{selectedBlock.page_role}</Badge>
+                    <Badge variant="secondary">{speakerName(selectedBlock)}</Badge>
+                    <Badge variant={selectedBlock.effective_mode === "lines" ? "secondary" : "outline"}>{selectedBlock.effective_mode}</Badge>
+                    <Badge variant={selectedBlock.currentIssues.length ? "destructive" : "outline"}>
+                      {selectedBlock.currentIssues.length ? selectedBlock.currentIssues.map(issueLabel).join(", ") : "clean"}
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-[minmax(170px,0.55fr)_minmax(260px,0.8fr)_minmax(320px,1.3fr)] gap-4 max-[1100px]:grid-cols-1">
+                    <Card>
+                      <CardHeader>
+                        <CardDescription>Speaker</CardDescription>
+                        <CardTitle className="text-2xl">{speakerName(selectedBlock)}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex flex-col gap-2">
+                        {selectedBlock.speaker_jp && <p lang="ja" className="text-sm text-muted-foreground">{selectedBlock.speaker_jp}</p>}
+                        <Badge variant="outline" className="w-fit">{selectedBlock.page_role}</Badge>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardDescription>Generated Windows</CardDescription>
+                        <CardTitle>
+                          {selectedBlockPreview?.window_count || 0} window{(selectedBlockPreview?.window_count || 0) === 1 ? "" : "s"}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex flex-col gap-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          <Badge variant="outline">{selectedBlockPreview?.body_line_count || 0} body lines</Badge>
+                          <Badge variant={selectedBlockPreview?.inserted_windows ? "secondary" : "outline"}>
+                            {selectedBlockPreview?.inserted_windows || 0} extra @h
+                          </Badge>
+                          <Badge variant="outline">{selectedBlock.line_ids?.length || 0} source lines</Badge>
+                        </div>
+                        {overflowReport?.exists && (
+                          <p className="text-sm text-muted-foreground">
+                            {selectedBlockReport
+                              ? `Last Jobs run generated ${selectedBlockReport.window_count} window${selectedBlockReport.window_count === 1 ? "" : "s"} for this block.`
+                              : "Last Jobs run has no block job for this block."}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardDescription>Scene Context</CardDescription>
+                        <CardTitle>{sceneSummary?.scene_title_en || selectedBlock.scene_title_jp}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex max-h-72 flex-col gap-3 overflow-auto scrollbar-thin">
+                        {sceneSummary?.summary_jp && <p lang="ja" className="text-sm leading-6 text-muted-foreground">{sceneSummary.summary_jp}</p>}
+                        {Array.isArray(sceneSummary?.active_characters) && sceneSummary.active_characters.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {sceneSummary.active_characters.map((name) => (
+                              <Badge key={name} variant="secondary">{name}</Badge>
+                            ))}
+                          </div>
+                        )}
+                        {Array.isArray(sceneSummary?.translation_notes_en) && sceneSummary.translation_notes_en.length > 0 && (
+                          <ul className="grid gap-2 pl-4 text-sm text-muted-foreground">
+                            {sceneSummary.translation_notes_en.slice(0, 4).map((note) => <li key={note}>{note}</li>)}
+                          </ul>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {previousBlocks.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardDescription>Previous Blocks</CardDescription>
+                      </CardHeader>
+                      <CardContent className="max-h-72 overflow-auto scrollbar-thin">
+                        <div className="divide-y">
+                          {previousBlocks.map((block) => (
+                            <Button
+                              key={block.block_id}
+                              type="button"
+                              variant="ghost"
+                              title={`Jump to previous block ${block.block_id}`}
+                              className="h-auto w-full justify-start rounded-none px-0 py-3 text-left"
+                              onClick={() => {
+                                setSelectedBlockId(block.block_id);
+                                setSuggestion(null);
+                              }}
+                            >
+                              <span className="grid w-full grid-cols-[150px_minmax(180px,0.9fr)_minmax(220px,1.1fr)] gap-3 max-[900px]:grid-cols-1">
+                                <span className="grid gap-1 text-xs text-muted-foreground">
+                                  <span className="font-mono">{block.block_id.replace(`${stem}:`, "")}</span>
+                                  <strong>{speakerName(block)}</strong>
+                                </span>
+                                <span lang="ja" className="whitespace-normal font-normal leading-5 text-muted-foreground">{block.jp}</span>
+                                <span className="whitespace-normal font-medium leading-5">{block.draft.en}</span>
+                              </span>
+                            </Button>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  <Card>
+                    <CardHeader>
+                      <CardDescription>Japanese Block</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <pre lang="ja" className="whitespace-pre-wrap rounded-lg bg-muted p-4 text-lg leading-8">{selectedBlock.jp}</pre>
+                    </CardContent>
+                  </Card>
+
+                  <div className="grid gap-4">
+                    <label className="grid gap-2">
+                      <span className="text-sm font-medium">English Block</span>
+                      <Textarea
+                        value={selectedBlock.draft.en}
+                        onChange={(event) => updateBlockDraft(selectedBlock.block_id, { en: event.target.value })}
+                        spellCheck="true"
+                        rows={10}
+                        className="min-h-56 resize-y text-base"
+                      />
+                    </label>
+
+                    <label className="grid gap-2">
+                      <span className="text-sm font-medium">Notes</span>
+                      <Textarea
+                        value={selectedBlock.draft.notes}
+                        onChange={(event) => updateBlockDraft(selectedBlock.block_id, { notes: event.target.value })}
+                        rows={3}
+                        className="resize-y"
+                      />
+                    </label>
+                  </div>
+
+                  <Card>
+                    <CardHeader>
+                      <CardDescription>Generated Preview</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-3">
+                      {selectedBlockPreview?.windows?.length ? (
+                        selectedBlockPreview.windows.map((windowLines, index) => (
+                          <pre key={`${selectedBlock.block_id}-${index}`} className="whitespace-pre-wrap rounded-lg border bg-muted p-3 text-sm leading-6">
+                            {windowLines.join("\n")}
+                            {"\n@h"}
+                          </pre>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No generated windows yet.</p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="flex flex-col gap-3 pt-6">
+                      <div className="flex gap-2">
+                        <Input
+                          value={instruction}
+                          onChange={(event) => setInstruction(event.target.value)}
+                          placeholder="Retranslation instruction"
+                        />
+                        <TooltipButton
+                          tooltip={`Ask DeepSeek to translate ${selectedBlock.block_id}`}
+                          disabled={busy === "deepseek"}
+                          onClick={askDeepSeek}
+                        >
+                          <Icon><Bot /></Icon>
+                          Ask
+                        </TooltipButton>
+                      </div>
+                      {suggestion && (
+                        <div className="grid gap-2 rounded-lg border bg-accent p-3 text-accent-foreground">
+                          <p className="whitespace-pre-wrap font-semibold">{suggestion.en}</p>
+                          {suggestion.notes && <p className="text-sm opacity-80">{suggestion.notes}</p>}
+                          <TooltipButton
+                            tooltip={`Apply the DeepSeek suggestion to ${selectedBlock.block_id}`}
+                            variant="secondary"
+                            className="w-fit"
+                            onClick={() => updateBlockDraft(selectedBlock.block_id, { en: suggestion.en || "" })}
+                          >
+                            <Icon><Download /></Icon>
+                            Apply
+                          </TooltipButton>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="grid h-full place-items-center text-muted-foreground">No blocks loaded.</div>
+              )
+            ) : selected ? (
               <div className="flex flex-col gap-4 p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
@@ -883,11 +1321,12 @@ function App() {
 
             <div className="grid gap-1 border-b p-3 text-sm">
               <div><strong>Approved</strong> {payload?.approvedExists ? "yes" : "missing"}</div>
+              <div><strong>Block approved</strong> {payload?.blockApprovedExists ? "yes" : "missing"}</div>
               <div><strong>Clean source</strong> {payload?.cleanSourceExists ? "yes" : "missing"}</div>
               <div>
                 <strong>Overflow report</strong>{" "}
                 {overflowReport?.exists
-                  ? `${overflowReport.overflowPages} pages / ${overflowReport.insertedWindows || 0} @h / ${overflowReport.wrappedLines} wrapped`
+                  ? `${overflowReport.blockJobs || 0} blocks / ${overflowReport.overflowPages} pages / ${overflowReport.insertedWindows || 0} @h / ${overflowReport.wrappedLines} wrapped`
                   : "missing"}
               </div>
               <div><strong>Latest backup</strong> {latestBackup?.id || "none"}</div>

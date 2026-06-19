@@ -6,6 +6,12 @@ import argparse
 from pathlib import Path
 from typing import Any
 
+from block_layout import (
+    block_replacement_lines,
+    build_blocks,
+    explicit_line_override_count_for_block,
+    line_override_enabled,
+)
 from translation_common import (
     configure_stdout,
     contains_japanese,
@@ -37,6 +43,15 @@ def split_render_lines(text: str) -> list[str]:
     return [line.strip() for line in normalized.split("\n") if line.strip()]
 
 
+def flatten_block_records(records: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    flattened: dict[str, dict[str, Any]] = {}
+    for record in records:
+        block_id = str(record.get("block_id", ""))
+        if block_id:
+            flattened[block_id] = record
+    return flattened
+
+
 def validate(args: argparse.Namespace) -> int:
     stem = Path(args.file).stem
     log(f"Loading corpus pages for {args.file}")
@@ -47,6 +62,23 @@ def validate(args: argparse.Namespace) -> int:
     records = read_jsonl(args.translations)
     translations = flatten_translation_records(records)
     log(f"Loaded {len(records)} record(s), {len(translations)} flattened translation(s)")
+    block_records: list[dict[str, Any]] = []
+    block_translations: dict[str, dict[str, Any]] = {}
+    active_block_line_ids: set[str] = set()
+    active_block_page_ids: set[str] = set()
+    if args.block_translations:
+        block_records = read_jsonl(args.block_translations)
+        block_translations = flatten_block_records(block_records)
+        log(f"Loaded {len(block_translations)} block translation(s)")
+        blocks_by_id = {block["block_id"]: block for block in build_blocks(pages)}
+        for block_id, item in block_translations.items():
+            block = blocks_by_id.get(block_id)
+            if not block or not str(item.get("en", "")).strip():
+                continue
+            if explicit_line_override_count_for_block(block, translations):
+                continue
+            active_block_line_ids.update(str(line_id) for line_id in block.get("line_ids", []))
+            active_block_page_ids.update(str(page_id) for page_id in block.get("page_ids", []))
     failures: list[dict[str, Any]] = []
     warnings: list[dict[str, Any]] = []
     checked = 0
@@ -56,6 +88,8 @@ def validate(args: argparse.Namespace) -> int:
             log(f"Validated {checked} translation(s)")
         if line_id not in index:
             failures.append({"line_id": line_id, "issue": "unknown_line_id"})
+            continue
+        if line_id in active_block_line_ids and not line_override_enabled(item):
             continue
         entry = index[line_id]
         if entry.get("auto"):
@@ -97,7 +131,9 @@ def validate(args: argparse.Namespace) -> int:
         if contains_japanese(en) and not args.allow_japanese:
             warnings.append({"line_id": line_id, "issue": "japanese_remaining", "en": en})
 
-    page_line_failures = validate_page_line_counts(index, translations)
+    block_checked = validate_blocks(pages, translations, block_translations, failures, warnings, args)
+
+    page_line_failures = validate_page_line_counts(index, translations, skip_page_ids=active_block_page_ids)
     if args.allow_window_overflow:
         for row in page_line_failures:
             warnings.append({**row, "issue": "auto_window_overflow_required"})
@@ -118,6 +154,7 @@ def validate(args: argparse.Namespace) -> int:
         "translation_file": str(args.translations),
         "text_profile": args.text_profile,
         "checked": checked,
+        "checked_blocks": block_checked,
         "failures": failures,
         "warnings": warnings,
         "ok": not failures,
@@ -132,13 +169,17 @@ def validate(args: argparse.Namespace) -> int:
 def validate_page_line_counts(
     index: dict[str, dict[str, Any]],
     translations: dict[str, dict[str, Any]],
+    skip_page_ids: set[str] | None = None,
 ) -> list[dict[str, Any]]:
     failures: list[dict[str, Any]] = []
+    skip_page_ids = skip_page_ids or set()
     pages: dict[str, list[dict[str, Any]]] = {}
     for entry in index.values():
         pages.setdefault(str(entry["page_id"]), []).append(entry)
 
     for page_id, entries in pages.items():
+        if page_id in skip_page_ids:
+            continue
         if not any(entry["line_id"] in translations for entry in entries):
             continue
 
@@ -167,6 +208,66 @@ def validate_page_line_counts(
                 }
             )
     return failures
+
+
+def validate_blocks(
+    pages: list[dict[str, Any]],
+    translations: dict[str, dict[str, Any]],
+    block_translations: dict[str, dict[str, Any]],
+    failures: list[dict[str, Any]],
+    warnings: list[dict[str, Any]],
+    args: argparse.Namespace,
+) -> int:
+    if not block_translations:
+        return 0
+
+    blocks_by_id = {block["block_id"]: block for block in build_blocks(pages)}
+    checked = 0
+    for block_id, item in block_translations.items():
+        block = blocks_by_id.get(block_id)
+        if not block:
+            failures.append({"line_id": block_id, "issue": "unknown_block_id"})
+            continue
+
+        en = str(item.get("en", "")).strip()
+        if not en:
+            failures.append({"line_id": block_id, "issue": "empty_block_translation"})
+            continue
+
+        override_count = explicit_line_override_count_for_block(block, translations)
+        if override_count:
+            warnings.append(
+                {
+                    "line_id": block_id,
+                    "issue": "block_disabled_by_line_overrides",
+                    "line_override_count": override_count,
+                }
+            )
+            continue
+
+        checked += 1
+        try:
+            replacement_lines = block_replacement_lines(block, en)
+        except ValueError as exc:
+            failures.append({"line_id": block_id, "issue": "block_layout_failed", "error": str(exc)})
+            continue
+
+        for final_line in replacement_lines:
+            if not cp932_ok(final_line):
+                failures.append({"line_id": block_id, "issue": "not_cp932_encodable", "en": en})
+            for char_row in disallowed_game_text_chars(final_line, args.text_profile):
+                failures.append(
+                    {
+                        "line_id": block_id,
+                        "issue": f"disallowed_{char_row['name']}",
+                        "char": char_row["char"],
+                        "en": en,
+                    }
+                )
+        if contains_japanese(en) and not args.allow_japanese:
+            warnings.append({"line_id": block_id, "issue": "japanese_remaining", "en": en})
+
+    return checked
 
 
 def write_html_report(path: Path, report: dict[str, Any]) -> None:
@@ -214,6 +315,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--file", required=True, help="ADX file name, for example s1.adx")
     parser.add_argument("--corpus-dir", type=Path, default=Path("work/corpus"))
     parser.add_argument("--translations", type=Path, required=True)
+    parser.add_argument("--block-translations", type=Path)
     parser.add_argument("--report-out", type=Path, default=Path("qa/reports"))
     parser.add_argument("--text-profile", choices=TEXT_PROFILES, default="vanilla")
     parser.add_argument("--allow-japanese", action="store_true")

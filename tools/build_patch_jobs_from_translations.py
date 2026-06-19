@@ -6,6 +6,12 @@ import argparse
 from pathlib import Path
 from typing import Any
 
+from block_layout import (
+    block_preview,
+    block_replacement_lines,
+    build_blocks,
+    explicit_line_override_count_for_block,
+)
 from translation_common import configure_stdout, flatten_translation_records, log, read_jsonl, write_json
 
 
@@ -84,6 +90,15 @@ def render_translation(entry: dict[str, Any], en: str, *, wrap: bool = False) ->
 def translation_is_allowed(item: dict[str, Any], args: argparse.Namespace) -> bool:
     status = str(item.get("status", "") or item.get("review_status", ""))
     return not args.require_approved or status in {"approved", ""}
+
+
+def flatten_block_records(records: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    flattened: dict[str, dict[str, Any]] = {}
+    for record in records:
+        block_id = str(record.get("block_id", ""))
+        if block_id:
+            flattened[block_id] = record
+    return flattened
 
 
 def source_lines_for_page(page: dict[str, Any]) -> list[str]:
@@ -289,6 +304,7 @@ def build_windowed_jobs(
     pages: list[dict[str, Any]],
     translations: dict[str, dict[str, Any]],
     args: argparse.Namespace,
+    skip_page_ids: set[str] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     jobs: list[dict[str, Any]] = []
     report: dict[str, Any] = {
@@ -297,6 +313,7 @@ def build_windowed_jobs(
         "overflow_pages": [],
         "wrapped_lines": [],
     }
+    skip_page_ids = skip_page_ids or set()
 
     known_line_ids = {entry["line_id"] for page in pages for entry in page["entries"]}
     for line_id in translations:
@@ -304,6 +321,8 @@ def build_windowed_jobs(
             raise SystemExit(f"Unknown line_id in translation file: {line_id}")
 
     for page in pages:
+        if page["page_id"] in skip_page_ids:
+            continue
         rendered_items, wrapped_lines = page_render_items(page, translations, args)
         report["wrapped_lines"].extend(wrapped_lines)
         if not any(item["patch"] for item in rendered_items):
@@ -363,6 +382,83 @@ def build_windowed_jobs(
     return jobs, report
 
 
+def build_block_jobs(
+    pages: list[dict[str, Any]],
+    translations: dict[str, dict[str, Any]],
+    block_translations: dict[str, dict[str, Any]],
+    args: argparse.Namespace,
+) -> tuple[list[dict[str, Any]], dict[str, Any], set[str]]:
+    jobs: list[dict[str, Any]] = []
+    covered_page_ids: set[str] = set()
+    blocks = build_blocks(pages)
+    blocks_by_id = {block["block_id"]: block for block in blocks}
+    report: dict[str, Any] = {
+        "block_mode": True,
+        "block_jobs": [],
+        "line_override_blocks": [],
+        "unknown_blocks": [],
+    }
+
+    for block_id in block_translations:
+        if block_id not in blocks_by_id:
+            raise SystemExit(f"Unknown block_id in block translation file: {block_id}")
+
+    for block in blocks:
+        block_id = str(block["block_id"])
+        item = block_translations.get(block_id)
+        if not item or not translation_is_allowed(item, args):
+            continue
+        en = str(item.get("en", "")).strip()
+        if not en:
+            continue
+
+        override_count = explicit_line_override_count_for_block(block, translations)
+        if override_count:
+            report["line_override_blocks"].append(
+                {
+                    "block_id": block_id,
+                    "line_override_count": override_count,
+                    "line_ids": block["line_ids"],
+                }
+            )
+            continue
+
+        replacement_lines = block_replacement_lines(block, en)
+        if not replacement_lines:
+            continue
+
+        source_lines = [str(line) for line in block["source_lines"]]
+        jobs.append(
+            {
+                "id": f"{block_id}:block",
+                "file": block["file"],
+                "line_number": int(block["script_range_start"]),
+                "line_end": int(block["script_range_end"]),
+                "source": "\r\n".join(source_lines),
+                "source_lines": source_lines,
+                "translation": "\r\n".join(replacement_lines),
+            }
+        )
+        covered_page_ids.update(str(page_id) for page_id in block["page_ids"])
+        preview = block_preview(block, en)
+        report["block_jobs"].append(
+            {
+                "block_id": block_id,
+                "file": block["file"],
+                "page_start": block["page_start"],
+                "page_end": block["page_end"],
+                "line_start": int(block["script_range_start"]),
+                "line_end": int(block["script_range_end"]),
+                "body_line_count": preview["body_line_count"],
+                "window_count": preview["window_count"],
+                "inserted_windows": preview["inserted_windows"],
+                "replacement_lines": replacement_lines,
+            }
+        )
+
+    return jobs, report, covered_page_ids
+
+
 def build_jobs(args: argparse.Namespace) -> None:
     stem = Path(args.file).stem
     log(f"Loading corpus pages for {args.file}")
@@ -372,15 +468,36 @@ def build_jobs(args: argparse.Namespace) -> None:
     log(f"Loading translations from {args.translations}")
     translations = flatten_translation_records(read_jsonl(args.translations))
     log(f"Loaded {len(translations)} flattened translation(s)")
+    block_translations: dict[str, dict[str, Any]] = {}
+    if args.block_translations:
+        log(f"Loading block translations from {args.block_translations}")
+        block_translations = flatten_block_records(read_jsonl(args.block_translations))
+        log(f"Loaded {len(block_translations)} block translation(s)")
 
     if args.auto_window_overflow:
         log("Building overflow-aware patch jobs")
-        jobs, report = build_windowed_jobs(pages, translations, args)
+        block_jobs: list[dict[str, Any]] = []
+        block_report: dict[str, Any] = {
+            "block_mode": bool(block_translations),
+            "block_jobs": [],
+            "line_override_blocks": [],
+            "unknown_blocks": [],
+        }
+        covered_page_ids: set[str] = set()
+        if block_translations:
+            block_jobs, block_report, covered_page_ids = build_block_jobs(pages, translations, block_translations, args)
+            log(f"Prepared {len(block_jobs)} block patch job(s)")
+        line_jobs, report = build_windowed_jobs(pages, translations, args, skip_page_ids=covered_page_ids)
+        jobs = block_jobs + line_jobs
+        report["block_mode"] = bool(block_translations)
+        report["block_jobs"] = block_report["block_jobs"]
+        report["line_override_blocks"] = block_report["line_override_blocks"]
         report_path = args.overflow_report or args.jobs.with_name(f"{args.jobs.stem}.overflow_report.json")
         write_json(report_path, report)
         log(
             f"Prepared {len(report['overflow_pages'])} overflow page(s) "
-            f"and wrapped {len(report['wrapped_lines'])} line(s); report {report_path}"
+            f"and {len(report['block_jobs'])} block job(s); "
+            f"wrapped {len(report['wrapped_lines'])} line(s); report {report_path}"
         )
     else:
         jobs = build_normal_jobs(index, translations, args)
@@ -394,6 +511,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--file", required=True, help="ADX file name, for example s1.adx")
     parser.add_argument("--corpus-dir", type=Path, default=Path("work/corpus"))
     parser.add_argument("--translations", type=Path, required=True)
+    parser.add_argument("--block-translations", type=Path, help="optional approved block translation JSONL")
     parser.add_argument("--jobs", type=Path, default=Path("patch_jobs/translated_jobs.json"))
     parser.add_argument("--include-auto-speakers", action="store_true")
     parser.add_argument("--require-approved", action="store_true")

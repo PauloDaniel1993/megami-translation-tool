@@ -72,12 +72,29 @@ The header should show:
 
 ## Editor Concepts
 
-- The left panel lists script lines and filters by scene, role, and issue.
-- The center panel edits the selected line.
-- `Japanese Source` shows the original Japanese.
+- The left panel lists blocks or script lines and filters by scene, role, and issue.
+- The center panel edits the selected block or line.
+- `Japanese Block` / `Japanese Source` shows the original Japanese.
 - `Scene Context` and `Previous Translations` help keep translation style consistent.
 - `Window Budget` estimates the selected page's visible line usage and automatic `@h` breaks.
 - The right panel runs the pipeline and shows logs.
+
+## Block And Line Editing
+
+The editor now supports two editing modes:
+
+- `Blocks`: default quality mode. A block is a safe run of contiguous pages with the same scene, role, and speaker. The editor stores these in `translations/approved/<stem>.blocks.approved.jsonl`.
+- `Lines`: direct per-line override mode. Line edits continue to use `translations/approved/<stem>.approved.jsonl`.
+
+Block translations can be any length. During Jobs generation, the builder wraps text, creates generated windows, and range-patches the original script span including the old `@h` lines. Generated block windows always end with a final `@h`.
+
+Line precedence is explicit:
+
+```text
+line override > block translation > legacy line translation > source
+```
+
+Existing line translations are treated as legacy lines. They seed block text in the editor, but a saved block takes precedence over them. When `Lines` is chosen while a translated block is selected, the editor automatically wraps the block text into physical lines, writes explicit line overrides with `layout_mode: "line"`, and switches to line view. Saving a block clears explicit line-override markers for that block so the block becomes active again.
 
 ## DeepSeek Retranslation
 
@@ -165,6 +182,14 @@ python tools/validate_translations.py --file s1.adx --translations translations/
 python tools/build_patch_jobs_from_translations.py --file s1.adx --translations translations/approved/s1.approved.jsonl --jobs patch_jobs/s1_translated_jobs.apostrophes.json --include-auto-speakers --auto-window-overflow
 
 python tools/game_management.py reinsert --source-dir work/clean_source --file s1.adx --jobs patch_jobs/s1_translated_jobs.apostrophes.json --out-dir patched_adx_apostrophes --mode variable
+```
+
+Block-aware command-line equivalent:
+
+```powershell
+python tools/validate_translations.py --file s1.adx --translations translations/approved/s1.approved.jsonl --block-translations translations/approved/s1.blocks.approved.jsonl --text-profile apostrophe-patched --allow-window-overflow --strict
+
+python tools/build_patch_jobs_from_translations.py --file s1.adx --translations translations/approved/s1.approved.jsonl --block-translations translations/approved/s1.blocks.approved.jsonl --jobs patch_jobs/s1_translated_jobs.apostrophes.json --include-auto-speakers --auto-window-overflow
 ```
 
 Use `--mode variable` for reinsertion because automatic windows change script length.
@@ -315,4 +340,3 @@ Get-Content patched_adx_apostrophes/variable_decoded/s1.txt
 - Health endpoint confirmed Locale Emulator detection with the path above.
 - Current overflow report can show saved temporary overflow text if that test content was saved into `translations/approved/s1.approved.jsonl`.
 - Before producing a final translation patch, review any temporary test lines in `translations/approved/s1.approved.jsonl`.
-
