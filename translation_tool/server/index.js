@@ -12,6 +12,7 @@ const backupsRoot = path.join(toolRoot, "backups");
 const port = Number(process.env.PORT || 5173);
 const isProduction = process.env.NODE_ENV === "production" || process.argv.includes("--production");
 const textProfiles = ["vanilla", "apostrophe-patched"];
+const previousScenePromptBlockLimit = 24;
 const exeSignatureOffset = 0x72f61;
 const originalExeSignature = Buffer.from("80fb270f8446020000", "hex");
 const patchedExeSignature = Buffer.from("80fb27909090909090", "hex");
@@ -66,6 +67,7 @@ function summarizeOverflowReport(report, relativePath) {
   const wrappedLines = Array.isArray(report?.wrapped_lines) ? report.wrapped_lines : [];
   const blockJobs = Array.isArray(report?.block_jobs) ? report.block_jobs : [];
   const lineOverrideBlocks = Array.isArray(report?.line_override_blocks) ? report.line_override_blocks : [];
+  const unsafeBlockRanges = Array.isArray(report?.unsafe_block_ranges) ? report.unsafe_block_ranges : [];
   const insertedWindows = overflowPages.reduce((total, page) => total + Number(page.inserted_windows || 0), 0);
   const blockInsertedWindows = blockJobs.reduce((total, block) => total + Number(block.inserted_windows || 0), 0);
   return {
@@ -75,6 +77,7 @@ function summarizeOverflowReport(report, relativePath) {
     insertedWindows: insertedWindows + blockInsertedWindows,
     blockJobs: blockJobs.length,
     lineOverrideBlocks: lineOverrideBlocks.length,
+    unsafeBlockRanges: unsafeBlockRanges.length,
     wrappedLines: wrappedLines.length,
     pages: overflowPages.map((page) => ({
       page_id: page.page_id,
@@ -93,6 +96,13 @@ function summarizeOverflowReport(report, relativePath) {
       body_line_count: block.body_line_count,
       window_count: block.window_count,
       inserted_windows: block.inserted_windows,
+    })),
+    unsafeBlocks: unsafeBlockRanges.map((block) => ({
+      block_id: block.block_id,
+      line_start: block.line_start,
+      line_end: block.line_end,
+      control_count: block.control_count,
+      controls: block.controls,
     })),
   };
 }
@@ -127,6 +137,29 @@ async function exists(filePath) {
     return true;
   } catch {
     return false;
+  }
+}
+
+async function requireFreshPatchedAdx(stem, slug) {
+  const jobsPath = projectPath("patch_jobs", `${stem}_translated_jobs.${slug}.json`);
+  const patchedPath = projectPath(`patched_adx_${slug}`, "variable", `${stem}.adx`);
+  const reportPath = projectPath(`patched_adx_${slug}`, "patch_report.json");
+  for (const requiredPath of [jobsPath, patchedPath, reportPath]) {
+    if (!(await exists(requiredPath))) {
+      const error = new Error(`Cannot install ADX because a required build artifact is missing: ${path.relative(projectRoot, requiredPath)}`);
+      error.status = 400;
+      throw error;
+    }
+  }
+  const [jobsStat, patchedStat, reportStat] = await Promise.all([
+    fs.stat(jobsPath),
+    fs.stat(patchedPath),
+    fs.stat(reportPath),
+  ]);
+  if (patchedStat.mtimeMs + 1000 < jobsStat.mtimeMs || reportStat.mtimeMs + 1000 < jobsStat.mtimeMs) {
+    const error = new Error("Cannot install ADX because the patched output is older than the patch jobs. Run Reinsert successfully first.");
+    error.status = 400;
+    throw error;
   }
 }
 
@@ -309,19 +342,60 @@ async function loadBlockTranslationRecords(stem) {
   return { approvedPath, records, translations };
 }
 
-async function loadTranslationPrompts(stem) {
+async function loadTranslationPrompts(stem, options = {}) {
   stem = safeStem(stem);
+  const includePrompt = options.includePrompt !== false;
+  const onlyTargetType = options.targetType ? String(options.targetType) : null;
+  const onlyTargetId = options.targetId ? String(options.targetId) : null;
   const promptPath = projectPath("qa", "reports", `${stem}_translation_prompts.jsonl`);
-  const records = await readJsonl(promptPath);
-  return records
-    .filter((record) => record.batch_id && record.prompt)
-    .map((record) => ({
-      batch_id: String(record.batch_id),
-      prompt: String(record.prompt),
+  const records = [];
+  const normalize = (record, source) => {
+    if (!record?.prompt) return null;
+    const batchId = record.batch_id ? String(record.batch_id) : null;
+    const lineId = record.line_id ? String(record.line_id) : null;
+    const blockId = record.block_id ? String(record.block_id) : null;
+    const targetType = record.target_type || (blockId ? "block" : lineId ? "line" : batchId ? "batch" : null);
+    const targetId = record.target_id ? String(record.target_id) : blockId || lineId || batchId;
+    if (!targetType || !targetId) return null;
+    if (onlyTargetType && targetType !== onlyTargetType) return null;
+    if (onlyTargetId && targetId !== onlyTargetId) return null;
+    return {
+      source,
+      target_type: targetType,
+      target_id: targetId,
+      batch_id: batchId,
+      line_id: lineId,
+      block_id: blockId,
+      has_prompt: true,
+      prompt: includePrompt ? String(record.prompt) : "",
+      prompt_parts: includePrompt && Array.isArray(record.prompt_parts) ? record.prompt_parts : null,
       status: record.status || null,
       created_at: record.created_at || null,
       model: record.model || null,
-    }));
+    };
+  };
+
+  for (const record of await readJsonl(promptPath)) {
+    const normalized = normalize(record, "qa");
+    if (normalized) records.push(normalized);
+  }
+
+  const suggestionsRoot = projectPath("translations", "suggestions", stem);
+  const suggestionFiles = onlyTargetId
+    ? [projectPath("translations", "suggestions", stem, `${safeSuggestionName(onlyTargetId)}.jsonl`)]
+    : (await listFilesRecursive(suggestionsRoot)).filter((file) => file.endsWith(".jsonl"));
+  for (const file of suggestionFiles) {
+    for (const record of await readJsonl(file)) {
+      const normalized = normalize(record, "suggestion");
+      if (normalized) records.push(normalized);
+    }
+  }
+
+  const timestamp = (record) => Date.parse(record.created_at || "") || 0;
+  records.sort((a, b) => timestamp(a) - timestamp(b));
+  const latestByTarget = new Map();
+  for (const record of records) latestByTarget.set(`${record.target_type}:${record.target_id}`, record);
+  return [...latestByTarget.values()].sort((a, b) => timestamp(b) - timestamp(a));
 }
 
 function buildRows(corpus, translations) {
@@ -536,6 +610,10 @@ function pageSourceLines(page, includeTerminator = true) {
   return lines;
 }
 
+function pagesArePhysicallyContiguous(previous, current) {
+  return Number(current.script_range_start) === Number(previous.script_range_end) + 1;
+}
+
 function finishBlock(pages) {
   if (!pages.length) return null;
   const entries = blockTranslatableEntries(pages);
@@ -589,12 +667,13 @@ function buildBlocks(pages) {
     const safe = page.terminator === "@h" && entries.length > 0;
     const key = blockKey(page);
     const wouldExceed = current.length >= maxBlockPages || currentEntries + entries.length > maxBlockEntries;
+    const crossesScriptGap = current.length && !pagesArePhysicallyContiguous(current[current.length - 1], page);
 
     if (!safe) {
       flush();
       continue;
     }
-    if (current.length && (key !== currentKey || wouldExceed)) flush();
+    if (current.length && (key !== currentKey || wouldExceed || crossesScriptGap)) flush();
     current.push(page);
     currentKey = key;
     currentEntries += entries.length;
@@ -678,6 +757,33 @@ function joinedLineTranslationForBlock(block, translations) {
     .join("\n");
 }
 
+function blockTranslationForPrompt(block, blockTranslations, lineTranslations) {
+  return String(blockTranslations.get(block.block_id)?.en || joinedLineTranslationForBlock(block, lineTranslations) || "").trim();
+}
+
+function previousSceneTranslationsForPrompt(blocks, currentBlock, blockTranslations, lineTranslations) {
+  const translatedBlocks = [];
+  for (const block of blocks) {
+    if (block.block_id === currentBlock.block_id) break;
+    if (block.scene_id !== currentBlock.scene_id) continue;
+    const en = blockTranslationForPrompt(block, blockTranslations, lineTranslations);
+    if (!en) continue;
+    translatedBlocks.push({
+      block_id: block.block_id,
+      page_role: block.page_role,
+      speaker_en: block.speaker_en,
+      jp: block.jp,
+      en,
+    });
+  }
+  const omitted = Math.max(0, translatedBlocks.length - previousScenePromptBlockLimit);
+  return {
+    scene_id: currentBlock.scene_id,
+    omitted_earlier_translated_blocks: omitted,
+    blocks: translatedBlocks.slice(-previousScenePromptBlockLimit),
+  };
+}
+
 function blockEffectiveMode(block, blockRecord, translations) {
   if (explicitLineOverrideCountForBlock(block, translations)) return "lines";
   if (String(blockRecord?.en || "").trim()) return "block";
@@ -729,7 +835,33 @@ function buildBlockRows(blocks, blockTranslations, lineTranslations, textProfile
   });
 }
 
-async function buildDeepSeekPrompt(stem, lineId, instruction, textProfile) {
+function promptPart(id, label, content, rows = 5) {
+  return {
+    id,
+    label,
+    content: String(content ?? ""),
+    rows,
+  };
+}
+
+function normalizePromptPart(part, index) {
+  return {
+    id: String(part?.id || `part-${index + 1}`),
+    label: String(part?.label || part?.id || `Part ${index + 1}`),
+    content: String(part?.content ?? ""),
+    rows: Number(part?.rows || 5),
+  };
+}
+
+function promptPartsToText(parts) {
+  return (Array.isArray(parts) ? parts : [])
+    .map((part, index) => normalizePromptPart(part, index))
+    .map((part) => part.content.trimEnd())
+    .filter((content) => content.trim())
+    .join("\n\n");
+}
+
+async function buildDeepSeekPromptParts(stem, lineId, instruction, textProfile) {
   const corpus = await loadCorpus(stem);
   const { translations } = await loadTranslationRecords(stem);
   const pages = corpus.pages;
@@ -769,42 +901,86 @@ async function buildDeepSeekPrompt(stem, lineId, instruction, textProfile) {
       ? "ASCII apostrophes and contractions are allowed. Do not use curly quotes, em dashes, en dashes, or ellipsis characters."
       : "Do not use apostrophes or contractions. Use ASCII punctuation and three periods for ellipses.";
 
-  return `Retranslate one visual novel line from Japanese to natural English.
+  const parts = [
+    promptPart(
+      "task",
+      "Task and Response Schema",
+      `Retranslate one visual novel line from Japanese to natural English.
 
 Return JSON only with this schema:
-{"en":"...","notes":"..."}
-
-Rules:
+{"en":"...","notes":"..."}`,
+      4,
+    ),
+    promptPart(
+      "rules",
+      "Rules",
+      `Rules:
 - Keep each physical line at or below ${entry.max_chars || 50} visible characters.
 - Preserve character voice and page rhythm.
 - ${profileRule}
-- If the current translation is awkward, improve it rather than paraphrasing mechanically.
-
-Optional user instruction:
-${instruction || "(none)"}
-
-Global style:
-${globalStyle}
-
-Glossary:
-${JSON.stringify(glossary, null, 2)}
-
-Character card:
-${characterCard || "(none)"}
-
-Scene summary:
-${JSON.stringify(sceneSummary || {}, null, 2)}
-
-Previous page:
-${JSON.stringify(pageForPrompt(pages[pageIndex - 1]), null, 2)}
-
-Current page:
-${JSON.stringify(pageForPrompt(page), null, 2)}
-
-Next page:
-${JSON.stringify(pageForPrompt(pages[pageIndex + 1]), null, 2)}
-
-Target:
+- If the current translation is awkward, improve it rather than paraphrasing mechanically.`,
+      6,
+    ),
+    promptPart(
+      "instruction",
+      "Optional User Instruction",
+      `Optional user instruction:
+${instruction || "(none)"}`,
+      4,
+    ),
+    promptPart(
+      "global_style",
+      "Global Style",
+      `Global style:
+${globalStyle}`,
+      8,
+    ),
+    promptPart(
+      "glossary",
+      "Glossary",
+      `Glossary:
+${JSON.stringify(glossary, null, 2)}`,
+      10,
+    ),
+    promptPart(
+      "character_card",
+      "Character Card",
+      `Character card:
+${characterCard || "(none)"}`,
+      8,
+    ),
+    promptPart(
+      "scene_summary",
+      "Scene Summary",
+      `Scene summary:
+${JSON.stringify(sceneSummary || {}, null, 2)}`,
+      8,
+    ),
+    promptPart(
+      "previous_page",
+      "Previous Page",
+      `Previous page:
+${JSON.stringify(pageForPrompt(pages[pageIndex - 1]), null, 2)}`,
+      10,
+    ),
+    promptPart(
+      "current_page",
+      "Current Page",
+      `Current page:
+${JSON.stringify(pageForPrompt(page), null, 2)}`,
+      12,
+    ),
+    promptPart(
+      "next_page",
+      "Next Page",
+      `Next page:
+${JSON.stringify(pageForPrompt(pages[pageIndex + 1]), null, 2)}`,
+      10,
+    ),
+    promptPart(
+      "target",
+      "Target",
+      `Target:
 ${JSON.stringify(
   {
     line_id: entry.line_id,
@@ -815,10 +991,20 @@ ${JSON.stringify(
   },
   null,
   2,
-)}`;
+)}`,
+      8,
+    ),
+  ];
+
+  return { targetType: "line", targetId: lineId, parts };
 }
 
-async function buildBlockDeepSeekPrompt(stem, blockId, instruction, textProfile) {
+async function buildDeepSeekPrompt(stem, lineId, instruction, textProfile) {
+  const { parts } = await buildDeepSeekPromptParts(stem, lineId, instruction, textProfile);
+  return promptPartsToText(parts);
+}
+
+async function buildBlockDeepSeekPromptParts(stem, blockId, instruction, textProfile) {
   const corpus = await loadCorpus(stem);
   const { translations: lineTranslations } = await loadTranslationRecords(stem);
   const { translations: blockTranslations } = await loadBlockTranslationRecords(stem);
@@ -859,37 +1045,80 @@ async function buildBlockDeepSeekPrompt(stem, blockId, instruction, textProfile)
       ? "ASCII apostrophes and contractions are allowed. Do not use curly quotes, em dashes, en dashes, or ellipsis characters."
       : "Do not use apostrophes or contractions. Use ASCII punctuation and three periods for ellipses.";
 
-  return `Translate one complete visual novel block from Japanese to natural English.
+  const parts = [
+    promptPart(
+      "task",
+      "Task and Response Schema",
+      `Translate one complete visual novel block from Japanese to natural English.
 
 Return JSON only with this schema:
-{"en":"...","notes":"..."}
-
-Rules:
+{"en":"...","notes":"..."}`,
+      4,
+    ),
+    promptPart(
+      "rules",
+      "Rules",
+      `Rules:
 - Translate the block as a coherent passage, not as isolated source lines.
 - Do not manually insert @h or speaker names. The tool will wrap lines and create game windows automatically.
 - Preserve character voice, narrative flow, and important pauses.
 - ${profileRule}
-- The English may be longer or shorter than the Japanese if that improves quality.
-
-Optional user instruction:
-${instruction || "(none)"}
-
-Global style:
-${globalStyle}
-
-Glossary:
-${JSON.stringify(glossary, null, 2)}
-
-Character card:
-${characterCard || "(none)"}
-
-Scene summary:
-${JSON.stringify(sceneSummary || {}, null, 2)}
-
-Previous page:
-${JSON.stringify(pageForPrompt(corpus.pages[firstPageIndex - 1]), null, 2)}
-
-Current block:
+- The English may be longer or shorter than the Japanese if that improves quality.`,
+      7,
+    ),
+    promptPart(
+      "instruction",
+      "Optional User Instruction",
+      `Optional user instruction:
+${instruction || "(none)"}`,
+      4,
+    ),
+    promptPart(
+      "global_style",
+      "Global Style",
+      `Global style:
+${globalStyle}`,
+      8,
+    ),
+    promptPart(
+      "glossary",
+      "Glossary",
+      `Glossary:
+${JSON.stringify(glossary, null, 2)}`,
+      10,
+    ),
+    promptPart(
+      "character_card",
+      "Character Card",
+      `Character card:
+${characterCard || "(none)"}`,
+      8,
+    ),
+    promptPart(
+      "scene_summary",
+      "Scene Summary",
+      `Scene summary:
+${JSON.stringify(sceneSummary || {}, null, 2)}`,
+      8,
+    ),
+    promptPart(
+      "previous_scene_translations",
+      "Previous Scene Translations",
+      `Previous translated blocks in this scene:
+${JSON.stringify(previousSceneTranslationsForPrompt(blocks, block, blockTranslations, lineTranslations), null, 2)}`,
+      10,
+    ),
+    promptPart(
+      "previous_page",
+      "Previous Page",
+      `Previous page:
+${JSON.stringify(pageForPrompt(corpus.pages[firstPageIndex - 1]), null, 2)}`,
+      10,
+    ),
+    promptPart(
+      "current_block",
+      "Current Block",
+      `Current block:
 ${JSON.stringify(
   {
     block_id: block.block_id,
@@ -901,13 +1130,27 @@ ${JSON.stringify(
   },
   null,
   2,
-)}
+)}`,
+      12,
+    ),
+    promptPart(
+      "next_page",
+      "Next Page",
+      `Next page:
+${JSON.stringify(pageForPrompt(corpus.pages[lastPageIndex + 1]), null, 2)}`,
+      10,
+    ),
+  ];
 
-Next page:
-${JSON.stringify(pageForPrompt(corpus.pages[lastPageIndex + 1]), null, 2)}`;
+  return { targetType: "block", targetId: blockId, parts };
 }
 
-async function callDeepSeek(prompt, model, temperature) {
+async function buildBlockDeepSeekPrompt(stem, blockId, instruction, textProfile) {
+  const { parts } = await buildBlockDeepSeekPromptParts(stem, blockId, instruction, textProfile);
+  return promptPartsToText(parts);
+}
+
+async function callDeepSeek(prompt, model, temperature, signal) {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     const error = new Error("Missing DEEPSEEK_API_KEY in translation_tool/.env or environment");
@@ -916,6 +1159,7 @@ async function callDeepSeek(prompt, model, temperature) {
   }
   const response = await fetch("https://api.deepseek.com/chat/completions", {
     method: "POST",
+    signal,
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
@@ -934,7 +1178,16 @@ async function callDeepSeek(prompt, model, temperature) {
   if (!response.ok) {
     throw new Error(payload.error?.message || `DeepSeek HTTP ${response.status}`);
   }
-  return JSON.parse(payload.choices[0].message.content);
+  const content = payload?.choices?.[0]?.message?.content;
+  if (!content) {
+    const detail = payload.error?.message || payload.message || JSON.stringify(payload).slice(0, 800);
+    throw new Error(`DeepSeek response missing message content for ${model}: ${detail}`);
+  }
+  try {
+    return JSON.parse(content);
+  } catch (error) {
+    throw new Error(`DeepSeek returned invalid JSON for ${model}: ${error.message}`);
+  }
 }
 
 const app = express();
@@ -956,25 +1209,101 @@ app.get("/api/health", async (_req, res, next) => {
   }
 });
 
+async function listCorpusStems() {
+  const corpusDir = projectPath("work", "corpus");
+  const stems = [];
+  if (!(await exists(corpusDir))) return stems;
+  for (const name of await fs.readdir(corpusDir)) {
+    if (name.endsWith(".pages.jsonl")) stems.push(name.replace(/\.pages\.jsonl$/, ""));
+  }
+  return stems.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+}
+
+async function buildFileProgress(stem) {
+  stem = safeStem(stem);
+  const corpus = await loadCorpus(stem);
+  const { records: lineRecords, translations: lineTranslations } = await loadTranslationRecords(stem);
+  const { records: blockRecords, translations: blockTranslations } = await loadBlockTranslationRecords(stem);
+  const rows = buildRows(corpus, lineTranslations);
+  const blocks = buildBlockRows(buildBlocks(corpus.pages), blockTranslations, lineTranslations, "apostrophe-patched");
+  const editableRows = rows.filter((row) => row.editable);
+  const translatedBlocks = blocks.filter((block) => String(block.en || "").trim()).length;
+  const translatedLines = editableRows.filter((row) => String(row.en || "").trim()).length;
+  return {
+    stem,
+    file: `${stem}.adx`,
+    scenes: Array.isArray(corpus.scenes) ? corpus.scenes.length : 0,
+    totalBlocks: blocks.length,
+    translatedBlocks,
+    untranslatedBlocks: Math.max(0, blocks.length - translatedBlocks),
+    totalLines: editableRows.length,
+    translatedLines,
+    untranslatedLines: Math.max(0, editableRows.length - translatedLines),
+    approvedExists: lineRecords.length > 0,
+    blockApprovedExists: blockRecords.length > 0,
+    activeBlocks: blocks.filter((block) => block.effective_mode === "block").length,
+    lineOverrideBlocks: blocks.filter((block) => block.effective_mode === "lines").length,
+  };
+}
+
 app.get("/api/files", async (_req, res, next) => {
   try {
-    const corpusDir = projectPath("work", "corpus");
     const files = [];
-    if (await exists(corpusDir)) {
-      for (const name of await fs.readdir(corpusDir)) {
-        if (!name.endsWith(".pages.jsonl")) continue;
-        const stem = name.replace(/\.pages\.jsonl$/, "");
-        const approvedPath = projectPath("translations", "approved", `${stem}.approved.jsonl`);
-        const cleanPath = projectPath("work", "clean_source", `${stem}.adx`);
+    for (const stem of await listCorpusStems()) {
+      const approvedPath = projectPath("translations", "approved", `${stem}.approved.jsonl`);
+      const cleanPath = projectPath("work", "clean_source", `${stem}.adx`);
+      files.push({
+        stem,
+        file: `${stem}.adx`,
+        approvedExists: await exists(approvedPath),
+        cleanSourceExists: await exists(cleanPath),
+      });
+    }
+    res.json({ files });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/progress", async (_req, res, next) => {
+  try {
+    const files = [];
+    for (const stem of await listCorpusStems()) {
+      try {
+        files.push(await buildFileProgress(stem));
+      } catch (error) {
         files.push({
           stem,
           file: `${stem}.adx`,
-          approvedExists: await exists(approvedPath),
-          cleanSourceExists: await exists(cleanPath),
+          error: error.message,
+          scenes: 0,
+          totalBlocks: 0,
+          translatedBlocks: 0,
+          untranslatedBlocks: 0,
+          totalLines: 0,
+          translatedLines: 0,
+          untranslatedLines: 0,
         });
       }
     }
-    res.json({ files });
+    const overall = files.reduce((summary, file) => ({
+      totalFiles: summary.totalFiles + 1,
+      completeFiles: summary.completeFiles + (file.totalBlocks > 0 && file.translatedBlocks >= file.totalBlocks ? 1 : 0),
+      totalBlocks: summary.totalBlocks + Number(file.totalBlocks || 0),
+      translatedBlocks: summary.translatedBlocks + Number(file.translatedBlocks || 0),
+      totalLines: summary.totalLines + Number(file.totalLines || 0),
+      translatedLines: summary.translatedLines + Number(file.translatedLines || 0),
+    }), {
+      totalFiles: 0,
+      completeFiles: 0,
+      totalBlocks: 0,
+      translatedBlocks: 0,
+      totalLines: 0,
+      translatedLines: 0,
+    });
+    overall.untranslatedBlocks = Math.max(0, overall.totalBlocks - overall.translatedBlocks);
+    overall.untranslatedLines = Math.max(0, overall.totalLines - overall.translatedLines);
+    res.json({ overall, files });
   } catch (error) {
     next(error);
   }
@@ -992,7 +1321,7 @@ app.get("/api/files/:stem", async (req, res, next) => {
       records: blockRecords,
       translations: blockTranslations,
     } = await loadBlockTranslationRecords(stem);
-    const translationPrompts = await loadTranslationPrompts(stem);
+    const translationPrompts = await loadTranslationPrompts(stem, { includePrompt: false });
     const overflowReportRelative = path.join("patch_jobs", `${stem}_translated_jobs.${slug}.overflow_report.json`);
     const overflowReport = await readJson(projectPath(overflowReportRelative), null);
     const rows = buildRows(corpus, translations).map((row) => ({
@@ -1033,6 +1362,32 @@ app.get("/api/files/:stem", async (req, res, next) => {
         lineOverrideBlocks: blocks.filter((block) => block.effective_mode === "lines").length,
       },
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/files/:stem/prompts/:targetType/:targetId", async (req, res, next) => {
+  try {
+    const stem = safeStem(req.params.stem);
+    const targetType = String(req.params.targetType || "");
+    const targetId = String(req.params.targetId || "");
+    if (!["batch", "line", "block"].includes(targetType) || !targetId) {
+      const error = new Error("Valid targetType and targetId are required");
+      error.status = 400;
+      throw error;
+    }
+    const [prompt] = await loadTranslationPrompts(stem, {
+      includePrompt: true,
+      targetType,
+      targetId,
+    });
+    if (!prompt) {
+      const error = new Error(`Prompt not found for ${targetType}:${targetId}`);
+      error.status = 404;
+      throw error;
+    }
+    res.json({ prompt });
   } catch (error) {
     next(error);
   }
@@ -1115,7 +1470,35 @@ app.post("/api/files/:stem/blocks/split-to-lines", async (req, res, next) => {
   }
 });
 
+app.post("/api/files/:stem/deepseek-prompt", async (req, res, next) => {
+  try {
+    const stem = safeStem(req.params.stem);
+    const {
+      lineId,
+      blockId,
+      instruction = "",
+      textProfile = "apostrophe-patched",
+    } = req.body;
+    if (!lineId && !blockId) {
+      const error = new Error("lineId or blockId is required");
+      error.status = 400;
+      throw error;
+    }
+    const payload = blockId
+      ? await buildBlockDeepSeekPromptParts(stem, String(blockId), instruction, textProfile)
+      : await buildDeepSeekPromptParts(stem, String(lineId), instruction, textProfile);
+    res.json({ ok: true, ...payload, prompt: promptPartsToText(payload.parts) });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.post("/api/files/:stem/retranslate", async (req, res, next) => {
+  const abortController = new AbortController();
+  req.on("aborted", () => abortController.abort());
+  res.on("close", () => {
+    if (!res.writableEnded) abortController.abort();
+  });
   try {
     const stem = safeStem(req.params.stem);
     const {
@@ -1124,26 +1507,42 @@ app.post("/api/files/:stem/retranslate", async (req, res, next) => {
       instruction = "",
       textProfile = "apostrophe-patched",
       model = "deepseek-v4-flash",
+      promptParts,
     } = req.body;
     if (!lineId && !blockId) {
       const error = new Error("lineId or blockId is required");
       error.status = 400;
       throw error;
     }
-    const prompt = blockId
-      ? await buildBlockDeepSeekPrompt(stem, String(blockId), instruction, textProfile)
-      : await buildDeepSeekPrompt(stem, String(lineId), instruction, textProfile);
-    const result = await callDeepSeek(prompt, model, Number(req.body.temperature ?? 0.2));
+    const promptPayload = Array.isArray(promptParts) && promptParts.length
+      ? {
+          targetType: blockId ? "block" : "line",
+          targetId: blockId ? String(blockId) : String(lineId),
+          parts: promptParts.map((part, index) => normalizePromptPart(part, index)),
+        }
+      : blockId
+        ? await buildBlockDeepSeekPromptParts(stem, String(blockId), instruction, textProfile)
+        : await buildDeepSeekPromptParts(stem, String(lineId), instruction, textProfile);
+    const prompt = promptPartsToText(promptPayload.parts);
+    if (!prompt.trim()) {
+      const error = new Error("Prompt is empty");
+      error.status = 400;
+      throw error;
+    }
+    const result = await callDeepSeek(prompt, model, Number(req.body.temperature ?? 0.2), abortController.signal);
     const targetId = blockId ? String(blockId) : String(lineId);
     const row = {
       created_at: new Date().toISOString(),
       stem,
+      target_type: blockId ? "block" : "line",
+      target_id: targetId,
       line_id: lineId || null,
       block_id: blockId || null,
       text_profile: textProfile,
       model,
       instruction,
       prompt,
+      prompt_parts: promptPayload.parts,
       suggestion: result,
     };
     await appendJsonl(projectPath("translations", "suggestions", stem, `${safeSuggestionName(targetId)}.jsonl`), row);
@@ -1193,6 +1592,8 @@ app.post("/api/workflows/build-jobs", async (req, res, next) => {
       `translations/approved/${stem}.blocks.approved.jsonl`,
       "--jobs",
       jobs,
+      "--source-dir",
+      "work/clean_source",
       "--include-auto-speakers",
       "--auto-window-overflow",
     ]);
@@ -1231,7 +1632,7 @@ app.post("/api/workflows/reinsert", async (req, res, next) => {
       "--mode",
       mode,
     ]);
-    const report = await readJson(projectPath(outDir, "patch_report.json"), null);
+    const report = result.exitCode === 0 ? await readJson(projectPath(outDir, "patch_report.json"), null) : null;
     res.json({ ...result, jobs, outDir, reportRows: Array.isArray(report) ? report.length : 0 });
   } catch (error) {
     next(error);
@@ -1294,6 +1695,7 @@ app.post("/api/install", async (req, res, next) => {
     const slug = profileSlug(textProfile);
     const backupId = timestampId();
     const backups = [];
+    if (installAdx) await requireFreshPatchedAdx(stem, slug);
     if (installExe) backups.push(await backupFile(projectPath("main.exe"), backupId));
     if (installAdx) backups.push(await backupFile(projectPath(`${stem}.adx`), backupId));
     if (installExe) {

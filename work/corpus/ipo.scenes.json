@@ -1,0 +1,80 @@
+[
+  {
+    "scene_id": "ipo:scene:0001",
+    "scene_index": 1,
+    "scene_title_jp": "一方その頃イベント",
+    "scene_title_en": "",
+    "start_line": 1,
+    "end_line": 8,
+    "source_line": "*+一方その頃イベント",
+    "source_hash": "dfd02ae1af21e7cb9d13dabc72227cb234a28c2d",
+    "page_count": 0,
+    "visible_line_count": 0,
+    "translatable_line_count": 0
+  },
+  {
+    "scene_id": "ipo:scene:0002",
+    "scene_index": 2,
+    "scene_title_jp": "アーライナの櫛",
+    "scene_title_en": "",
+    "start_line": 9,
+    "end_line": 157,
+    "source_line": "*+アーライナの櫛",
+    "source_hash": "39ff7839f7d35b4d7b1445be7bf9d95f7ef3deed",
+    "page_count": 35,
+    "visible_line_count": 77,
+    "translatable_line_count": 56
+  },
+  {
+    "scene_id": "ipo:scene:0003",
+    "scene_index": 3,
+    "scene_title_jp": "悪徳高利貸し",
+    "scene_title_en": "",
+    "start_line": 158,
+    "end_line": 572,
+    "source_line": "*+悪徳高利貸し",
+    "source_hash": "525d378044c613cea927a9d0484f96d100f6e9a8",
+    "page_count": 96,
+    "visible_line_count": 190,
+    "translatable_line_count": 164
+  },
+  {
+    "scene_id": "ipo:scene:0004",
+    "scene_index": 4,
+    "scene_title_jp": "グリフィン強襲",
+    "scene_title_en": "",
+    "start_line": 573,
+    "end_line": 609,
+    "source_line": "*+グリフィン強襲",
+    "source_hash": "7fc63ae9a10ea227851cc867884fdd16396ab0bf",
+    "page_count": 7,
+    "visible_line_count": 12,
+    "translatable_line_count": 9
+  },
+  {
+    "scene_id": "ipo:scene:0005",
+    "scene_index": 5,
+    "scene_title_jp": "ミストラディイベント発生",
+    "scene_title_en": "",
+    "start_line": 610,
+    "end_line": 762,
+    "source_line": "*+ミストラディイベント発生",
+    "source_hash": "59570d5337cf11b35f819c11084225d02c3e0e9f",
+    "page_count": 27,
+    "visible_line_count": 56,
+    "translatable_line_count": 45
+  },
+  {
+    "scene_id": "ipo:scene:0006",
+    "scene_index": 6,
+    "scene_title_jp": "ミストラディイベント二回目",
+    "scene_title_en": "",
+    "start_line": 763,
+    "end_line": 931,
+    "source_line": "*+ミストラディイベント二回目",
+    "source_hash": "5fbea05c01594a6ede21745e82f5f2bd6272150f",
+    "page_count": 42,
+    "visible_line_count": 93,
+    "translatable_line_count": 75
+  }
+]

@@ -11,9 +11,12 @@ from block_layout import (
     build_blocks,
     explicit_line_override_count_for_block,
     line_override_enabled,
+    unsafe_control_lines,
 )
+from game_management import decode_adx_bytes
 from translation_common import (
     configure_stdout,
+    cp932_bad_chars,
     contains_japanese,
     cp932_ok,
     disallowed_game_text_chars,
@@ -52,6 +55,21 @@ def flatten_block_records(records: list[dict[str, Any]]) -> dict[str, dict[str, 
     return flattened
 
 
+def load_clean_source_lines(path: Path) -> list[str]:
+    if not path.is_file():
+        return []
+    decoded = decode_adx_bytes(path.read_bytes()).decode("cp932", errors="strict")
+    return decoded.splitlines()
+
+
+def source_lines_for_block_range(block: dict[str, Any], clean_source_lines: list[str]) -> list[str]:
+    start = int(block["script_range_start"])
+    end = int(block["script_range_end"])
+    if clean_source_lines and 1 <= start <= end <= len(clean_source_lines):
+        return clean_source_lines[start - 1 : end]
+    return [str(line) for line in block["source_lines"]]
+
+
 def validate(args: argparse.Namespace) -> int:
     stem = Path(args.file).stem
     log(f"Loading corpus pages for {args.file}")
@@ -66,10 +84,12 @@ def validate(args: argparse.Namespace) -> int:
     block_translations: dict[str, dict[str, Any]] = {}
     active_block_line_ids: set[str] = set()
     active_block_page_ids: set[str] = set()
+    clean_source_lines: list[str] = []
     if args.block_translations:
         block_records = read_jsonl(args.block_translations)
         block_translations = flatten_block_records(block_records)
         log(f"Loaded {len(block_translations)} block translation(s)")
+        clean_source_lines = load_clean_source_lines(args.source_dir / args.file)
         blocks_by_id = {block["block_id"]: block for block in build_blocks(pages)}
         for block_id, item in block_translations.items():
             block = blocks_by_id.get(block_id)
@@ -118,7 +138,7 @@ def validate(args: argparse.Namespace) -> int:
                     failures.append(row)
         for final_line in final_lines:
             if not cp932_ok(final_line):
-                failures.append({"line_id": line_id, "issue": "not_cp932_encodable", "en": en})
+                failures.append({"line_id": line_id, "issue": "not_cp932_encodable", "chars": cp932_bad_chars(final_line), "en": en})
             for char_row in disallowed_game_text_chars(final_line, args.text_profile):
                 failures.append(
                     {
@@ -131,7 +151,7 @@ def validate(args: argparse.Namespace) -> int:
         if contains_japanese(en) and not args.allow_japanese:
             warnings.append({"line_id": line_id, "issue": "japanese_remaining", "en": en})
 
-    block_checked = validate_blocks(pages, translations, block_translations, failures, warnings, args)
+    block_checked = validate_blocks(pages, translations, block_translations, clean_source_lines, failures, warnings, args)
 
     page_line_failures = validate_page_line_counts(index, translations, skip_page_ids=active_block_page_ids)
     if args.allow_window_overflow:
@@ -161,7 +181,7 @@ def validate(args: argparse.Namespace) -> int:
     }
     write_json(args.report_out / f"{stem}_validation.json", report)
     write_html_report(args.report_out / f"{stem}_validation.html", report)
-    log(f"Checked {checked} translation(s): {len(failures)} failure(s), {len(warnings)} warning(s)")
+    log(f"Checked {checked} line translation(s), {block_checked} block translation(s): {len(failures)} failure(s), {len(warnings)} warning(s)")
     log(f"Wrote validation reports to {args.report_out}")
     return 1 if failures and args.strict else 0
 
@@ -214,6 +234,7 @@ def validate_blocks(
     pages: list[dict[str, Any]],
     translations: dict[str, dict[str, Any]],
     block_translations: dict[str, dict[str, Any]],
+    clean_source_lines: list[str],
     failures: list[dict[str, Any]],
     warnings: list[dict[str, Any]],
     args: argparse.Namespace,
@@ -246,6 +267,20 @@ def validate_blocks(
             continue
 
         checked += 1
+        controls = unsafe_control_lines(source_lines_for_block_range(block, clean_source_lines))
+        if controls:
+            failures.append(
+                {
+                    "line_id": block_id,
+                    "issue": "unsafe_block_script_controls",
+                    "line_start": int(block["script_range_start"]),
+                    "line_end": int(block["script_range_end"]),
+                    "count": len(controls),
+                    "controls": controls[:20],
+                }
+            )
+            continue
+
         try:
             replacement_lines = block_replacement_lines(block, en)
         except ValueError as exc:
@@ -254,7 +289,7 @@ def validate_blocks(
 
         for final_line in replacement_lines:
             if not cp932_ok(final_line):
-                failures.append({"line_id": block_id, "issue": "not_cp932_encodable", "en": en})
+                failures.append({"line_id": block_id, "issue": "not_cp932_encodable", "chars": cp932_bad_chars(final_line), "en": en})
             for char_row in disallowed_game_text_chars(final_line, args.text_profile):
                 failures.append(
                     {
@@ -294,7 +329,7 @@ def write_html_report(path: Path, report: dict[str, Any]) -> None:
 </head>
 <body>
   <h1>{escape(report['file'])} Translation Validation</h1>
-  <p>Checked: {report['checked']}. Failures: {len(report['failures'])}. Warnings: {len(report['warnings'])}.</p>
+  <p>Checked: {report['checked']} line translations and {report.get('checked_blocks', 0)} block translations. Failures: {len(report['failures'])}. Warnings: {len(report['warnings'])}.</p>
   <h2>Failures</h2>
   <table><thead><tr><th>Line</th><th>Issue</th><th>Details</th></tr></thead><tbody>{failure_rows}</tbody></table>
   <h2>Warnings</h2>
@@ -314,6 +349,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Validate translated Megami JSONL records.")
     parser.add_argument("--file", required=True, help="ADX file name, for example s1.adx")
     parser.add_argument("--corpus-dir", type=Path, default=Path("work/corpus"))
+    parser.add_argument("--source-dir", type=Path, default=Path("work/clean_source"))
     parser.add_argument("--translations", type=Path, required=True)
     parser.add_argument("--block-translations", type=Path)
     parser.add_argument("--report-out", type=Path, default=Path("qa/reports"))

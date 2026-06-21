@@ -328,6 +328,8 @@ def command_build_jobs(args: argparse.Namespace) -> None:
 
 
 def load_jobs(path: Path) -> list[PatchJob]:
+    if not path.is_file():
+        raise SystemExit(f"Patch jobs file not found: {path}. Run Jobs successfully before Reinsert.")
     payload = json.loads(path.read_text(encoding="utf-8"))
     return [PatchJob(**item) for item in payload]
 

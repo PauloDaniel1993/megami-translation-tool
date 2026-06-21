@@ -92,6 +92,20 @@ def cp932_ok(text: str) -> bool:
     return True
 
 
+def cp932_bad_chars(text: str) -> list[str]:
+    bad: list[str] = []
+    seen: set[str] = set()
+    for char in text:
+        if char in seen:
+            continue
+        try:
+            char.encode("cp932", errors="strict")
+        except UnicodeEncodeError:
+            bad.append(char)
+            seen.add(char)
+    return bad
+
+
 def disallowed_game_text_chars(text: str, text_profile: str = "vanilla") -> list[dict[str, str]]:
     if text_profile not in DISALLOWED_GAME_TEXT_CHARS_BY_PROFILE:
         raise ValueError(f"Unknown text profile: {text_profile}")

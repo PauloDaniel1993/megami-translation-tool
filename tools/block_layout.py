@@ -94,6 +94,21 @@ def page_source_lines(page: dict[str, Any], *, include_terminator: bool) -> list
     return lines
 
 
+def is_script_control_line(line: str) -> bool:
+    stripped = str(line).strip()
+    if not stripped or stripped == "@h":
+        return False
+    return stripped.startswith("@") or stripped.startswith("*")
+
+
+def unsafe_control_lines(lines: list[str]) -> list[str]:
+    return [str(line) for line in lines if is_script_control_line(str(line))]
+
+
+def pages_are_physically_contiguous(previous: dict[str, Any], current: dict[str, Any]) -> bool:
+    return int(current["script_range_start"]) == int(previous["script_range_end"]) + 1
+
+
 def block_source_lines(block: dict[str, Any]) -> list[str]:
     lines: list[str] = []
     pages = block.get("pages", [])
@@ -141,7 +156,7 @@ def finish_block(pages: list[dict[str, Any]]) -> dict[str, Any] | None:
     }
 
 
-def build_blocks(pages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def build_blocks(pages: list[dict[str, Any]], *, split_on_script_gaps: bool = True) -> list[dict[str, Any]]:
     blocks: list[dict[str, Any]] = []
     current: list[dict[str, Any]] = []
     current_key: tuple[str, str, str] | None = None
@@ -164,12 +179,17 @@ def build_blocks(pages: list[dict[str, Any]]) -> list[dict[str, Any]]:
             len(current) >= MAX_BLOCK_PAGES
             or current_entries + len(entries) > MAX_BLOCK_ENTRIES
         )
+        crosses_script_gap = bool(
+            split_on_script_gaps
+            and current
+            and not pages_are_physically_contiguous(current[-1], page)
+        )
 
         if not safe:
             flush()
             continue
 
-        if current and (key != current_key or would_exceed):
+        if current and (key != current_key or would_exceed or crosses_script_gap):
             flush()
 
         current.append(page)

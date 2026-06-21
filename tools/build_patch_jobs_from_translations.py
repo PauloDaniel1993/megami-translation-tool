@@ -11,7 +11,9 @@ from block_layout import (
     block_replacement_lines,
     build_blocks,
     explicit_line_override_count_for_block,
+    unsafe_control_lines,
 )
+from game_management import decode_adx_bytes
 from translation_common import configure_stdout, flatten_translation_records, log, read_jsonl, write_json
 
 
@@ -99,6 +101,21 @@ def flatten_block_records(records: list[dict[str, Any]]) -> dict[str, dict[str, 
         if block_id:
             flattened[block_id] = record
     return flattened
+
+
+def load_clean_source_lines(path: Path) -> list[str]:
+    if not path.is_file():
+        raise SystemExit(f"Clean source ADX file not found: {path}")
+    decoded = decode_adx_bytes(path.read_bytes()).decode("cp932", errors="strict")
+    return decoded.splitlines()
+
+
+def source_lines_for_block_range(block: dict[str, Any], clean_source_lines: list[str]) -> list[str]:
+    start = int(block["script_range_start"])
+    end = int(block["script_range_end"])
+    if clean_source_lines and 1 <= start <= end <= len(clean_source_lines):
+        return clean_source_lines[start - 1 : end]
+    return [str(line) for line in block["source_lines"]]
 
 
 def source_lines_for_page(page: dict[str, Any]) -> list[str]:
@@ -397,7 +414,11 @@ def build_block_jobs(
         "block_jobs": [],
         "line_override_blocks": [],
         "unknown_blocks": [],
+        "unsafe_block_ranges": [],
     }
+    clean_source_lines = load_clean_source_lines(args.source_dir / args.file)
+    if clean_source_lines:
+        log(f"Loaded {len(clean_source_lines)} clean source line(s) from {args.source_dir / args.file}")
 
     for block_id in block_translations:
         if block_id not in blocks_by_id:
@@ -427,7 +448,21 @@ def build_block_jobs(
         if not replacement_lines:
             continue
 
-        source_lines = [str(line) for line in block["source_lines"]]
+        source_lines = source_lines_for_block_range(block, clean_source_lines)
+        controls = unsafe_control_lines(source_lines)
+        if controls:
+            report["unsafe_block_ranges"].append(
+                {
+                    "block_id": block_id,
+                    "file": block["file"],
+                    "line_start": int(block["script_range_start"]),
+                    "line_end": int(block["script_range_end"]),
+                    "control_count": len(controls),
+                    "controls": controls[:20],
+                }
+            )
+            continue
+
         jobs.append(
             {
                 "id": f"{block_id}:block",
@@ -482,8 +517,10 @@ def build_jobs(args: argparse.Namespace) -> None:
             "block_jobs": [],
             "line_override_blocks": [],
             "unknown_blocks": [],
+            "unsafe_block_ranges": [],
         }
         covered_page_ids: set[str] = set()
+        report_path = args.overflow_report or args.jobs.with_name(f"{args.jobs.stem}.overflow_report.json")
         if block_translations:
             block_jobs, block_report, covered_page_ids = build_block_jobs(pages, translations, block_translations, args)
             log(f"Prepared {len(block_jobs)} block patch job(s)")
@@ -492,8 +529,16 @@ def build_jobs(args: argparse.Namespace) -> None:
         report["block_mode"] = bool(block_translations)
         report["block_jobs"] = block_report["block_jobs"]
         report["line_override_blocks"] = block_report["line_override_blocks"]
-        report_path = args.overflow_report or args.jobs.with_name(f"{args.jobs.stem}.overflow_report.json")
+        report["unsafe_block_ranges"] = block_report["unsafe_block_ranges"]
         write_json(report_path, report)
+        if block_report["unsafe_block_ranges"]:
+            if args.jobs.exists():
+                args.jobs.unlink()
+            sample = ", ".join(row["block_id"] for row in block_report["unsafe_block_ranges"][:5])
+            raise SystemExit(
+                f"Unsafe block ranges cross script control lines: {len(block_report['unsafe_block_ranges'])}. "
+                f"First block(s): {sample}. Split these into smaller line/block translations before building jobs."
+            )
         log(
             f"Prepared {len(report['overflow_pages'])} overflow page(s) "
             f"and {len(report['block_jobs'])} block job(s); "
@@ -513,6 +558,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--translations", type=Path, required=True)
     parser.add_argument("--block-translations", type=Path, help="optional approved block translation JSONL")
     parser.add_argument("--jobs", type=Path, default=Path("patch_jobs/translated_jobs.json"))
+    parser.add_argument("--source-dir", type=Path, default=Path("work/clean_source"))
     parser.add_argument("--include-auto-speakers", action="store_true")
     parser.add_argument("--require-approved", action="store_true")
     parser.add_argument(
